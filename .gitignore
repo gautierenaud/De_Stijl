@@ -3,3 +3,6 @@ projet_destijl_2016/include/
 projet_destijl_2016/lib_destijl/
 projet_destijl_2016/libs/
 projet_destijl_2016/xenomai/
+projet_destijl_2016/projet_initial/*.o
+*.swp
+robot
