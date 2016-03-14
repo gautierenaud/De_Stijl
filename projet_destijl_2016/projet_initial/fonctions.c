@@ -2,6 +2,63 @@
 
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
+
+void camera_func(void * arg)
+{
+	/* Create var */
+	DCamera *cam = d_new_camera();
+	DImage *img = d_new_image();
+	DJpegimage *jpgimg =  d_new_jpegimage();
+	DMessage* message;
+	
+	if (!cam){rt_printf("[Init Camera] - Impossible de créer une nouvelle camera.\n");}
+	if (!img){rt_printf("[Init Camera] - Impossible de créer une nouvelle image.\n");}
+	if (!jpgimg) {rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");}
+	
+	/* Init camera */
+	d_camera_open(cam);
+	
+	/* Getting a frame */
+	d_camera_print(cam);
+	
+	/* Set task periodic */
+	rt_printf ("tcamera : Debut de l'éxecution de periodique à 20 fps\n");
+	rt_task_set_periodic (NULL, TM_NOW, 50000000);
+
+	while (1)
+	{
+		/* Attente de l'activation périodique */
+		rt_task_wait_period (NULL);
+		rt_printf ("tcamera : Activation périodique\n");
+		
+		d_camera_get_frame(cam, img);
+		d_image_print(img);
+
+		/* Compressing image */
+		d_jpegimage_compress(jpgimg, img);
+
+		/* Sending message */
+		message = d_new_message();
+		if (!message) {rt_printf("[Init Camera] - Impossible de créer un nouveau message.\n");}
+		d_message_put_jpeg_image(message, jpgimg);
+
+		if (write_in_queue (&queueMsgGUI, message, sizeof (DMessage)) < 0)
+		{
+			message->free (message);
+		}
+
+		/* Free imgs */
+		d_jpegimage_release(jpgimg);
+		d_image_release(img);
+	}
+	
+	
+	/* Free var */
+	d_jpegimage_free(jpgimg);
+	d_image_free(img);
+	d_camera_close(cam);
+	d_camera_free(cam);
+}
 void envoyer(void *arg) {
     DMessage *msg;
     int err;
@@ -207,9 +264,10 @@ void batteryLevel(void *arg) {
 
 }
 
-int write_in_queue(RT_QUEUE * msgQueue, void *data, int size) {
-    void *msg;
-    int err;
+int write_in_queue (RT_QUEUE * msgQueue, void *data, int size)
+{
+  void *msg;
+  int err;
 
     msg = rt_queue_alloc(msgQueue, size);
     memcpy(msg, &data, size);

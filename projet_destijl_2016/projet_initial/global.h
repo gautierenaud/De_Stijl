@@ -16,6 +16,7 @@ extern RT_TASK tconnect;
 extern RT_TASK tmove;
 extern RT_TASK tenvoyer;
 extern RT_TASK tbattery;
+extern RT_TASK tcamera;
 
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
@@ -34,7 +35,8 @@ extern DServer *serveur;
 extern DRobot *robot;
 extern DMovement *move;
 extern DCamera *camera;
-extern DMission *misson;
+extern DMission *mission;
+extern DBattery *battery;
 
 /* @constantes */
 extern int MSG_QUEUE_SIZE;
@@ -43,6 +45,7 @@ extern int PRIORITY_TCONNECT;
 extern int PRIORITY_TMOVE;
 extern int PRIORITY_TENVOYER;
 extern int PRIORITY_TBATTERY;
+extern int PRIORITY_TCAMERA;
 
 #endif	/* GLOBAL_H */
 

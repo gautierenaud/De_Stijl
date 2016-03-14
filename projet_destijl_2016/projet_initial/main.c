@@ -86,7 +86,12 @@ void initStruct(void) {
         exit(EXIT_FAILURE);
     }
     
-    if (err = rt_task_create(&tbattery, NULL, 0, PRIORITY_TBATTERY, 0)) {
+    /*if (err = rt_task_create(&tbattery, NULL, 0, PRIORITY_TBATTERY, 0)) {
+        rt_printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }*/
+    
+    if (err = rt_task_create(&tcamera, NULL, 0, PRIORITY_TCAMERA, 0)) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
@@ -103,6 +108,7 @@ void initStruct(void) {
     serveur = d_new_server();
     camera = d_new_camera();
     mission = d_new_mission();
+    battery = d_new_battery ();
 }
 
 void startTasks() {
@@ -123,7 +129,11 @@ void startTasks() {
         rt_printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_start(&tbattery, &batteryLevel, NULL)) {
+    /*if (err = rt_task_start(&tbattery, &batteryLevel, NULL)) {
+        rt_printf("Error task start: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }*/
+    if (err = rt_task_start(&tcamera, &camera_func, NULL)) {
         rt_printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
@@ -134,4 +144,5 @@ void deleteTasks() {
     rt_task_delete(&tServeur);
     rt_task_delete(&tconnect);
     rt_task_delete(&tmove);
+    rt_task_delete(&tbattery);
 }
