@@ -86,7 +86,12 @@ void initStruct(void) {
         exit(EXIT_FAILURE);
     }
     
-    if (err = rt_task_create(&tbattery, NULL, 0, PRIORITY_TBATTERY, 0)) {
+    /*if (err = rt_task_create(&tbattery, NULL, 0, PRIORITY_TBATTERY, 0)) {
+        rt_printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }*/
+    
+    if (err = rt_task_create(&tcamera, NULL, 0, PRIORITY_TCAMERA, 0)) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
@@ -121,7 +126,11 @@ void startTasks() {
         rt_printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_start(&tbattery, &batteryLevel, NULL)) {
+    /*if (err = rt_task_start(&tbattery, &batteryLevel, NULL)) {
+        rt_printf("Error task start: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }*/
+    if (err = rt_task_start(&tcamera, &camera_func, NULL)) {
         rt_printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
