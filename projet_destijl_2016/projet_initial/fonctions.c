@@ -244,14 +244,16 @@ void deplacer (void *arg)
 
 void batteryLevel (void *arg)
 {
+  DMessage *message;
+  int level;
+  int status = 1;
 
-	DBattery *battery;
-	DMessage *message;
-	int level;
-	int status = 1;
+  
+  
+  rt_printf ("tmove : Debut de l'éxecution de periodique à 1s (tbattery)\n");
+  rt_task_set_periodic (NULL, TM_NOW, 1000000000);
 
-	battery = d_new_battery ();
-
+	while (1){
 	rt_task_wait_period (NULL);
 	rt_printf ("tbattery : Activation périodique\n");
 
@@ -260,9 +262,8 @@ void batteryLevel (void *arg)
 	rt_mutex_release (&mutexEtat);
 
 	if (status == STATUS_OK){
-
-		while (1){
-			rt_mutex_acquire (&mutexEtat, TM_INFINITE);
+    
+	  	rt_mutex_acquire (&mutexEtat, TM_INFINITE);
 
 			level = battery->get_level (battery);
 
@@ -279,8 +280,7 @@ void batteryLevel (void *arg)
 	}
 }
 
-int
-write_in_queue (RT_QUEUE * msgQueue, void *data, int size)
+int write_in_queue (RT_QUEUE * msgQueue, void *data, int size)
 {
   void *msg;
   int err;
