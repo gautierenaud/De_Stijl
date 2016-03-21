@@ -33,6 +33,7 @@ DServer *serveur;
 DCamera *camera;
 DMission *mission;
 DBattery *battery;
+DArena * arena;
 
 
 int MSG_QUEUE_SIZE = 10;

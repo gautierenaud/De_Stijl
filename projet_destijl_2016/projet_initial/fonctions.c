@@ -3,6 +3,21 @@
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
 
+void detect_arena(void * arg)
+{
+    //No new needed for arena as d_image_compute_arena_position does
+    while(1)
+    {
+        rt_printf("tconnect : Attente du sémarphore semConnecterRobot\n");
+        rt_sem_p(&semDetectArena, TM_INFINITE);
+        rt_printf("tconnect : Detection de l'arène\n");
+        
+        rt_mutex_acquire(mutexArena);
+    }
+    
+    d_arena_free(arena);
+    return;
+}
 
 void camera_func(void * arg)
 {
