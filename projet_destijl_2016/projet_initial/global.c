@@ -26,6 +26,8 @@ int etatCommRobot = 1;
 DRobot *robot;
 DMovement *move;
 DServer *serveur;
+DCamera *camera;
+DMission *mission;
 DBattery *battery;
 
 

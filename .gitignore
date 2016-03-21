@@ -5,5 +5,45 @@ projet_destijl_2016/libs/
 projet_destijl_2016/xenomai/
 projet_destijl_2016/projet_initial/*.o
 projet_destijl_2016/projet_initial/nbproject/
+projet_destijl_2016/projet_initial/robot
+moniteur-2-1-5-beta/moniteur-2-1-5-beta/config.properties
+
 *.swp
+*~
+*.txt
+*.sh
+*.xml
 robot
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/

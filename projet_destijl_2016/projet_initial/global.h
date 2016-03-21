@@ -34,6 +34,8 @@ extern int etatCommRobot;
 extern DServer *serveur;
 extern DRobot *robot;
 extern DMovement *move;
+extern DCamera *camera;
+extern DMission *mission;
 extern DBattery *battery;
 
 /* @constantes */
