@@ -21,6 +21,7 @@ extern "C" {
    void envoyer(void *arg);
 	void batteryLevel(void *arg);
 	void camera_func(void *arg);
+        void verifyConnectStatus(void *arg);
 
 #ifdef	__cplusplus
 }

@@ -17,6 +17,7 @@ extern RT_TASK tmove;
 extern RT_TASK tenvoyer;
 extern RT_TASK tbattery;
 extern RT_TASK tcamera;
+extern RT_TASK tverify;
 
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
@@ -28,6 +29,7 @@ extern RT_MUTEX mutexPosition;
 /* @descripteurs des sempahore */
 extern RT_SEM semConnecterRobot;
 extern RT_SEM semGetImage;
+extern RT_SEM semDetectArena;
 
 /* @descripteurs des files de messages */
 extern RT_QUEUE queueMsgGUI;
@@ -50,6 +52,7 @@ extern int PRIORITY_TMOVE;
 extern int PRIORITY_TENVOYER;
 extern int PRIORITY_TBATTERY;
 extern int PRIORITY_TCAMERA;
+extern int PRIORITY_TVERIFY;
 
 #endif	/* GLOBAL_H */
 
