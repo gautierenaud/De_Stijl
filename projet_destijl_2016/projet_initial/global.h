@@ -17,6 +17,7 @@ extern RT_TASK tmove;
 extern RT_TASK tenvoyer;
 extern RT_TASK tbattery;
 extern RT_TASK tcamera;
+extern RT_TASK tverify;
 
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
@@ -46,6 +47,7 @@ extern int PRIORITY_TMOVE;
 extern int PRIORITY_TENVOYER;
 extern int PRIORITY_TBATTERY;
 extern int PRIORITY_TCAMERA;
+extern int PRIORITY_TVERIFY;
 
 #endif	/* GLOBAL_H */
 

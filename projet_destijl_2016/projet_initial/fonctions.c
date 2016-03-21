@@ -244,8 +244,8 @@ void batteryLevel(void *arg) {
 
 	rt_mutex_acquire (&mutexEtat, TM_INFINITE);
 	//status = etatCommRobot;
-                status = robot->status;
-                etatCommRobot = status;
+                status = etatCommRobot; //A mettre dans verify status
+                //etatCommRobot = status; //Same
 	rt_mutex_release (&mutexEtat);
 
 	if (status == STATUS_OK){
@@ -266,6 +266,40 @@ void batteryLevel(void *arg) {
 		}
 	}
 
+}
+
+void verifyConnectStatus(void *arg){
+    
+    
+    
+    int status;
+    
+    rt_printf ("tverify : Debut de l'éxecution de periodique à 1s (tverify)\n");
+    rt_task_set_periodic (NULL, TM_NOW, 1000000000);
+    
+    while (1){
+        printf("tverify: entree dans la boucle\n");
+        rt_task_wait_period (NULL);
+        rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+        status = etatCommRobot;
+        rt_mutex_release(&mutexEtat);
+        
+        
+    
+        if (status==STATUS_OK){
+            printf("tverufy: Activation de tverify\n");
+                
+                rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+                robot -> reload_wdt(robot);       
+                status = robot->get_status(robot);
+                etatCommRobot = status;
+                rt_mutex_release(&mutexEtat);
+        }
+        else{
+                robot->start(robot);
+        }
+    
+        }
 }
 
 int write_in_queue (RT_QUEUE * msgQueue, void *data, int size)

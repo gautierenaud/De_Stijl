@@ -13,6 +13,7 @@ RT_TASK tmove;
 RT_TASK tenvoyer;
 RT_TASK tbattery;
 RT_TASK tcamera;
+RT_TASK tverify;
 
 RT_MUTEX mutexEtat;
 RT_MUTEX mutexMove;
@@ -39,3 +40,4 @@ int PRIORITY_TMOVE = 15;
 int PRIORITY_TENVOYER = 25;
 int PRIORITY_TBATTERY = 10;
 int PRIORITY_TCAMERA = 5;
+int PRIORITY_TVERIFY = 10;
