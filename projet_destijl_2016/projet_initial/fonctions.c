@@ -8,30 +8,31 @@ void camera_func(void * arg)
 	DCamera *cam = d_new_camera();
 	DImage *img = d_new_image();
 	DJpegimage *jpgimg =  d_new_jpegimage();
-	DMessage* message;
+	DMessage *message;
 	
 	if (!cam){rt_printf("[Init Camera] - Impossible de créer une nouvelle camera.\n");}
 	if (!img){rt_printf("[Init Camera] - Impossible de créer une nouvelle image.\n");}
 	if (!jpgimg) {rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");}
 	
 	/* Init camera */
+                cam->mIndice=0;
 	d_camera_open(cam);
 	
 	/* Getting a frame */
 	d_camera_print(cam);
 	
 	/* Set task periodic */
-	rt_printf ("tcamera : Debut de l'éxecution de periodique à 20 fps\n");
-	rt_task_set_periodic (NULL, TM_NOW, 50000000);
+	rt_printf ("tcamera : Debut de l'éxecution de periodique à 5 fps\n");
+	rt_task_set_periodic (NULL, TM_NOW, 500000000);
 
 	while (1)
 	{
 		/* Attente de l'activation périodique */
 		rt_task_wait_period (NULL);
-		rt_printf ("tcamera : Activation périodique\n");
+		//rt_printf ("tcamera : Activation périodique\n");
 		
 		d_camera_get_frame(cam, img);
-		d_image_print(img);
+		//d_image_print(img);
 
 		/* Compressing image */
 		d_jpegimage_compress(jpgimg, img);
@@ -66,12 +67,12 @@ void envoyer (void *arg)
 
   while (1)
     {
-      rt_printf ("tenvoyer : Attente d'un message\n");
+      //rt_printf ("tenvoyer : Attente d'un message\n");
       if ((err =
 	   rt_queue_read (&queueMsgGUI, &msg, sizeof (DMessage),
 			  TM_INFINITE)) >= 0)
 		{
-		  rt_printf ("tenvoyer : envoi d'un message au moniteur\n");
+		  //rt_printf ("tenvoyer : envoi d'un message au moniteur\n");
 		  serveur->send (serveur, msg);
 		  msg->free (msg);
 		}
@@ -189,7 +190,9 @@ void deplacer (void *arg)
       rt_printf ("tmove : Activation périodique\n");
 
       rt_mutex_acquire (&mutexEtat, TM_INFINITE);
-      status = etatCommRobot;
+      //status = etatCommRobot;
+      status = robot->status;
+      etatCommRobot = status;
       rt_mutex_release (&mutexEtat);
 
       if (status == STATUS_OK)
@@ -238,14 +241,14 @@ void deplacer (void *arg)
 		  message->free (message);
 		}
 	    }
-	}
-    }
+                }
+        }
 }
 
 void batteryLevel (void *arg)
 {
   DMessage *message;
-  int level;
+  int vbat;
   int status = 1;
 
   
@@ -258,14 +261,16 @@ void batteryLevel (void *arg)
 	rt_printf ("tbattery : Activation périodique\n");
 
 	rt_mutex_acquire (&mutexEtat, TM_INFINITE);
-	status = etatCommRobot;
+	//status = etatCommRobot;
+                status = robot->status;
+                etatCommRobot = status;
 	rt_mutex_release (&mutexEtat);
 
 	if (status == STATUS_OK){
     
 	  	rt_mutex_acquire (&mutexEtat, TM_INFINITE);
-
-			level = battery->get_level (battery);
+                                                robot->get_vbat(robot, &vbat);
+                                                battery->set_level(battery, vbat);
 
 			rt_mutex_release (&mutexEtat);
 
