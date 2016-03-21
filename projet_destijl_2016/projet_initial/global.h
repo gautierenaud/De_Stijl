@@ -22,9 +22,14 @@ extern RT_TASK tverify;
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
 extern RT_MUTEX mutexMove;
+extern RT_MUTEX mutexRobot;
+extern RT_MUTEX mutexArena;
+extern RT_MUTEX mutexPosition;
 
 /* @descripteurs des sempahore */
 extern RT_SEM semConnecterRobot;
+extern RT_SEM semGetImage;
+extern RT_SEM semDetectArena;
 
 /* @descripteurs des files de messages */
 extern RT_QUEUE queueMsgGUI;

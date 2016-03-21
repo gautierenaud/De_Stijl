@@ -3,6 +3,22 @@
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
 
+void detect_arena(void * arg)
+{
+    //No new needed for arena as d_image_compute_arena_position does
+    while(1)
+    {
+        rt_printf("tconnect : Attente du sémarphore semConnecterRobot\n");
+        rt_sem_p(&semDetectArena, TM_INFINITE);
+        rt_printf("tconnect : Detection de l'arène\n");
+        
+        rt_mutex_acquire(mutexArena);
+    }
+    
+    d_arena_free(arena);
+    return;
+}
+
 void camera_func(void * arg)
 {
 	/* Create var */
@@ -16,15 +32,15 @@ void camera_func(void * arg)
 	if (!jpgimg) {rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");}
 	
 	/* Init camera */
-                cam->mIndice=0;
+   cam->mIndice=0;
 	d_camera_open(cam);
 	
 	/* Getting a frame */
 	d_camera_print(cam);
 	
 	/* Set task periodic */
-	rt_printf ("tcamera : Debut de l'éxecution de periodique à 5 fps\n");
-	rt_task_set_periodic (NULL, TM_NOW, 500000000);
+	rt_printf ("tcamera : Debut de l'éxecution de periodique à 600 ms\n");
+	rt_task_set_periodic (NULL, TM_NOW, 600000000);
 
 	while (1)
 	{
@@ -224,6 +240,8 @@ void deplacer(void *arg) {
                     message->free(message);
                 }
             }
+        } else {
+            rt_sem_v(&semConnecterRobot);
         }
     }
 }
