@@ -9,30 +9,31 @@ void camera_func(void * arg)
 	DCamera *cam = d_new_camera();
 	DImage *img = d_new_image();
 	DJpegimage *jpgimg =  d_new_jpegimage();
-	DMessage* message;
+	DMessage *message;
 	
 	if (!cam){rt_printf("[Init Camera] - Impossible de créer une nouvelle camera.\n");}
 	if (!img){rt_printf("[Init Camera] - Impossible de créer une nouvelle image.\n");}
 	if (!jpgimg) {rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");}
 	
 	/* Init camera */
+                cam->mIndice=0;
 	d_camera_open(cam);
 	
 	/* Getting a frame */
 	d_camera_print(cam);
 	
 	/* Set task periodic */
-	rt_printf ("tcamera : Debut de l'éxecution de periodique à 20 fps\n");
-	rt_task_set_periodic (NULL, TM_NOW, 50000000);
+	rt_printf ("tcamera : Debut de l'éxecution de periodique à 5 fps\n");
+	rt_task_set_periodic (NULL, TM_NOW, 500000000);
 
 	while (1)
 	{
 		/* Attente de l'activation périodique */
 		rt_task_wait_period (NULL);
-		rt_printf ("tcamera : Activation périodique\n");
+		//rt_printf ("tcamera : Activation périodique\n");
 		
 		d_camera_get_frame(cam, img);
-		d_image_print(img);
+		//d_image_print(img);
 
 		/* Compressing image */
 		d_jpegimage_compress(jpgimg, img);
@@ -231,38 +232,41 @@ void deplacer(void *arg) {
 
 void batteryLevel(void *arg) {
 
-    DBattery *battery;
-    DMessage *message;
-    int level;
-    int status = 1;
+  DMessage *message;
+  int vbat;
+  int status = 1;
 
-    battery = d_new_battery();
+  
+  rt_printf ("tmove : Debut de l'éxecution de periodique à 1s (tbattery)\n");
+  rt_task_set_periodic (NULL, TM_NOW, 1000000000);
 
-    rt_task_wait_period(NULL);
-    rt_printf("tbattery : Activation périodique\n");
+	while (1){
+	rt_task_wait_period (NULL);
+	rt_printf ("tbattery : Activation périodique\n");
 
-    rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-    status = etatCommRobot;
-    rt_mutex_release(&mutexEtat);
+	rt_mutex_acquire (&mutexEtat, TM_INFINITE);
+	//status = etatCommRobot;
+                status = robot->status;
+                etatCommRobot = status;
+	rt_mutex_release (&mutexEtat);
 
-    if (status == STATUS_OK) {
+	if (status == STATUS_OK){
+    
+	  	rt_mutex_acquire (&mutexEtat, TM_INFINITE);
+                                                robot->get_vbat(robot, &vbat);
+                                                battery->set_level(battery, vbat);
 
-        while (1) {
-            rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+			rt_mutex_release (&mutexEtat);
 
-            level = battery->get_level(battery);
-
-            rt_mutex_release(&mutexEtat);
-
-            message = d_new_message();
-            message->put_battery_level(message, battery);
-            rt_printf("tbattery : Envoi message\n");
-            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
-                message->free(message);
-            }
-        }
-    }
-
+			message = d_new_message ();
+			 	message->put_battery_level (message, battery);
+			rt_printf ("tbattery : Envoi message\n");
+			if (write_in_queue (&queueMsgGUI, message, sizeof (DMessage)) < 0)
+			{
+				message->free (message);
+			}
+		}
+	}
 
 }
 
