@@ -3,6 +3,7 @@
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
 
+
 void camera_func(void * arg)
 {
 	/* Create var */
@@ -16,15 +17,15 @@ void camera_func(void * arg)
 	if (!jpgimg) {rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");}
 	
 	/* Init camera */
-                cam->mIndice=0;
+   cam->mIndice=0;
 	d_camera_open(cam);
 	
 	/* Getting a frame */
 	d_camera_print(cam);
 	
 	/* Set task periodic */
-	rt_printf ("tcamera : Debut de l'éxecution de periodique à 5 fps\n");
-	rt_task_set_periodic (NULL, TM_NOW, 500000000);
+	rt_printf ("tcamera : Debut de l'éxecution de periodique à 600 ms\n");
+	rt_task_set_periodic (NULL, TM_NOW, 600000000);
 
 	while (1)
 	{
