@@ -21,9 +21,13 @@ extern RT_TASK tcamera;
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
 extern RT_MUTEX mutexMove;
+extern RT_MUTEX mutexRobot;
+extern RT_MUTEX mutexArena;
+extern RT_MUTEX mutexPosition;
 
 /* @descripteurs des sempahore */
 extern RT_SEM semConnecterRobot;
+extern RT_SEM semGetImage;
 
 /* @descripteurs des files de messages */
 extern RT_QUEUE queueMsgGUI;

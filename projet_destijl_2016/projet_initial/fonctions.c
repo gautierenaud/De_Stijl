@@ -223,6 +223,8 @@ void deplacer(void *arg) {
                     message->free(message);
                 }
             }
+        } else {
+            rt_sem_v(&semConnecterRobot);
         }
     }
 }

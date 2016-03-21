@@ -16,8 +16,12 @@ RT_TASK tcamera;
 
 RT_MUTEX mutexEtat;
 RT_MUTEX mutexMove;
+RT_MUTEX mutexRobot;
+RT_MUTEX mutexArena;
+RT_MUTEX mutexPosition;
 
 RT_SEM semConnecterRobot;
+RT_SEM semGetImage;
 
 RT_QUEUE queueMsgGUI;
 
@@ -35,7 +39,7 @@ int MSG_QUEUE_SIZE = 10;
 
 int PRIORITY_TSERVEUR = 30;
 int PRIORITY_TCONNECT = 20;
-int PRIORITY_TMOVE = 10;
+int PRIORITY_TMOVE = 15;
 int PRIORITY_TENVOYER = 25;
 int PRIORITY_TBATTERY = 10;
-int PRIORITY_TCAMERA = 15;
+int PRIORITY_TCAMERA = 10;
