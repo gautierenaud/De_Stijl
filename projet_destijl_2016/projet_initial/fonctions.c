@@ -25,13 +25,17 @@ void camera_func(void * arg)
 	/* Set task periodic */
 	rt_printf ("tcamera : Debut de l'éxecution de periodique à 5 fps\n");
 	rt_task_set_periodic (NULL, TM_NOW, 500000000);
+        
+        //rt_sem_v(&semGetImage);
 
 	while (1)
 	{
 		/* Attente de l'activation périodique */
 		rt_task_wait_period (NULL);
 		//rt_printf ("tcamera : Activation périodique\n");
-		
+                                
+                          //      rt_sem_p(&semGetImage, TM_INFINITE);
+                
 		d_camera_get_frame(cam, img);
 		//d_image_print(img);
 
