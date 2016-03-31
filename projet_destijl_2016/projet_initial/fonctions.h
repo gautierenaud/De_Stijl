@@ -23,6 +23,7 @@ extern "C" {
     void camera_func(void *arg);
     void verifyConnectStatus(void *arg);
     void detect_arena(void * arg);
+    void compute_position(void * arg);
 
 #ifdef	__cplusplus
 }

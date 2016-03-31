@@ -19,6 +19,7 @@ extern RT_TASK tbattery;
 extern RT_TASK tcamera;
 extern RT_TASK tverify;
 extern RT_TASK tarena;
+extern RT_TASK tcomputepos;
 
 /* @descripteurs des mutex */
 extern RT_MUTEX mutexEtat;
@@ -32,6 +33,7 @@ extern RT_MUTEX mutexImage;
 extern RT_SEM semConnecterRobot;
 extern RT_SEM semGetImage;
 extern RT_SEM semDetectArena;
+extern RT_SEM semComputePosition;
 
 /* @descripteurs des files de messages */
 extern RT_QUEUE queueMsgGUI;
@@ -47,6 +49,7 @@ extern DMission *mission;
 extern DBattery *battery;
 extern DArena * arena;
 extern DImage * image;
+extern DPosition * position;
 
 /* @constantes */
 extern int MSG_QUEUE_SIZE;
@@ -58,6 +61,7 @@ extern int PRIORITY_TBATTERY;
 extern int PRIORITY_TCAMERA;
 extern int PRIORITY_TVERIFY;
 extern int PRIORITY_TARENA;
+extern int PRIORITY_TCOMPUTEPOS;
 
 #endif	/* GLOBAL_H */
 

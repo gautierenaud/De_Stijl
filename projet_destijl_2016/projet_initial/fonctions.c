@@ -2,6 +2,57 @@
 
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
+
+void compute_position(void * arg) {
+    rt_task_set_periodic(NULL, TM_NOW, 600000000);
+    DMessage *message;
+    
+    while(1)
+    {
+        rt_task_wait_period(NULL);
+        rt_printf("[tcomputepos] - Activation périodique.\n");
+        rt_sem_p(&semComputePosition, TM_INFINITE);
+        
+        rt_mutex_acquire(&mutexArena, TM_INFINITE);
+        rt_mutex_acquire(&mutexImage, TM_INFINITE);
+        
+        position = d_image_compute_robot_position(image, arena);
+        
+        rt_mutex_release(&mutexArena);
+        
+        if (position)
+        {
+            d_imageshop_draw_position(image, position);
+        }
+        else 
+        {
+            rt_printf("[tcomputepos] - Robot en dehors de l'arène\n");
+        }
+        
+        rt_mutex_release(&mutexImage);
+        rt_sem_v(&semComputePosition);
+        
+        
+        /* Sending message */
+        if (position)
+        {
+            message = d_new_message();
+            if (!message) {
+                rt_printf("[tcomputepos] - Impossible de créer un nouveau message.\n");
+            }
+            d_message_put_position(message, position);
+
+            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                message->free(message);
+            }
+        }
+
+    }
+    
+    return ;
+}
+
+
 void detect_arena(void * arg) {
     //No new needed for arena as d_image_compute_arena_position does
     while (1) {
@@ -19,8 +70,8 @@ void detect_arena(void * arg) {
             rt_printf("tarena : Erreur, null pointer sur image\n");
         }
 
-        rt_mutex_release(&mutexArena);
         rt_mutex_release(&mutexImage);
+        rt_mutex_release(&mutexArena);
     }
 
     d_arena_free(arena);
@@ -31,7 +82,6 @@ void camera_func(void * arg) {
     /* Create var */
     DJpegimage *jpgimg = d_new_jpegimage();
     DMessage *message;
-    DPosition * pos;
 
     if (!jpgimg) {
         rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");
@@ -51,18 +101,32 @@ void camera_func(void * arg) {
     while (1) {
         /* Attente de l'activation périodique */
         rt_task_wait_period(NULL);
-        //rt_printf ("tcamera : Activation périodique\n");
+        rt_printf ("tcamera : Activation périodique\n");
 
         rt_mutex_acquire(&mutexImage, TM_INFINITE);
         d_image_release(image);
         d_camera_get_frame(camera, image);
-        pos = d_image_compute_robot_position(image, arena);
+        
+        rt_mutex_acquire(&mutexArena, TM_INFINITE);
+        //position = d_image_compute_robot_position(image, arena);
         //d_image_print(img);
-
-
+        
         /* Dessin image */
-        d_imageshop_draw_arena(image, arena);
-        d_imageshop_draw_position(image, pos);
+        if(arena)
+        {
+            d_imageshop_draw_arena(image, arena);
+        }
+        
+        rt_mutex_release(&mutexArena);
+        
+        /*if (position)
+        {
+            d_imageshop_draw_position(image, position);
+        }
+        else
+        {
+            rt_printf("[tcamera] - Robot en dehors de l'arène\n");
+        }*/
 
         /* Compressing image */
         d_jpegimage_compress(jpgimg, image);
@@ -178,6 +242,18 @@ void communiquer(void *arg) {
                             rt_printf("tserver : Le message reçu %d est une action detect arena\n",
                                     num_msg);
                             rt_sem_v(&semDetectArena);
+                            break;
+                            
+                        case ACTION_COMPUTE_CONTINUOUSLY_POSITION:
+                            rt_printf("tserver : Le message reçu %d est une action compute position\n",
+                                    num_msg);
+                            rt_sem_v(&semComputePosition);
+                            break;
+                            
+                        case ACTION_STOP_COMPUTE_POSITION:
+                            rt_printf("tserver : Le message reçu %d est une action stop compute position\n",
+                                    num_msg);
+                            rt_sem_p(&semComputePosition, TM_INFINITE);
                             break;
                     }
                     break;

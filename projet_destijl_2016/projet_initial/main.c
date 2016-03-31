@@ -90,6 +90,9 @@ void initStruct(void) {
     if (err = rt_sem_create(&semDetectArena, NULL, 0, S_FIFO)) {
         rt_printf("Error semaphore create: %s\n", strerror(-err));
     }
+    if (err = rt_sem_create(&semComputePosition, NULL, 0, S_FIFO)) {
+        rt_printf("Error semaphore create: %s\n", strerror(-err));
+    }
 
     /* Creation des taches */
     if (err = rt_task_create(&tServeur, NULL, 0, PRIORITY_TSERVEUR, 0)) {
@@ -123,15 +126,20 @@ void initStruct(void) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
+    
+    if (err = rt_task_create(&tcomputepos, NULL, 0, PRIORITY_TCOMPUTEPOS, 0)) {
+        rt_printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+    
+    if (err = rt_task_create(&tarena, NULL, 0, PRIORITY_TARENA, 0)) {
+        rt_printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
 
     /* Creation des files de messages */
     if (err = rt_queue_create(&queueMsgGUI, "toto", MSG_QUEUE_SIZE * sizeof (DMessage), MSG_QUEUE_SIZE, Q_FIFO)) {
         rt_printf("Error msg queue create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
-    }
-
-    if (err = rt_task_create(&tarena, NULL, 0, PRIORITY_TARENA, 0)) {
-        rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
 
@@ -179,6 +187,11 @@ void startTasks() {
         rt_printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
+    
+   if (err = rt_task_start(&tcomputepos, &compute_position, NULL)) {
+        rt_printf("Error task start: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
 
 }
 
@@ -190,4 +203,5 @@ void deleteTasks() {
     rt_task_delete(&tcamera);
     rt_task_delete(&tverify);
     rt_task_delete(&tarena);
+    rt_task_delete(&tcomputepos);
 }
