@@ -2,96 +2,92 @@
 
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
-
-void detect_arena(void * arg)
-{
+void detect_arena(void * arg) {
     //No new needed for arena as d_image_compute_arena_position does
-    while(1)
-    {
+    while (1) {
         rt_printf("tarena : Attente du sémarphore semDetectArena\n");
         rt_sem_p(&semDetectArena, TM_INFINITE);
         rt_printf("tarena : Detection de l'arène\n");
-        
+
         rt_mutex_acquire(&mutexArena, TM_INFINITE);
         rt_mutex_acquire(&mutexImage, TM_INFINITE);
-        
-        if (image)
-        {
+
+        if (image) {
             arena = d_image_compute_arena_position(image);
-            
-        }
-        else
-        {
+
+        } else {
             rt_printf("tarena : Erreur, null pointer sur image\n");
         }
-        
+
         rt_mutex_release(&mutexArena);
         rt_mutex_release(&mutexImage);
     }
-    
+
     d_arena_free(arena);
     return;
 }
 
-void camera_func(void * arg)
-{
-	/* Create var */
-	DJpegimage *jpgimg =  d_new_jpegimage();
-	DMessage *message;
-	
-	if (!jpgimg) {rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");}
-	
-	/* Init camera */
-                camera->mIndice=0;
-	d_camera_open(camera);
-	
-	/* Getting a frame */
-	d_camera_print(camera);
-	
-	/* Set task periodic */
-	rt_printf ("tcamera : Debut de l'éxecution de periodique à 600 ms\n");
-	rt_task_set_periodic (NULL, TM_NOW, 600000000);
+void camera_func(void * arg) {
+    /* Create var */
+    DJpegimage *jpgimg = d_new_jpegimage();
+    DMessage *message;
 
-	while (1)
-	{
-		/* Attente de l'activation périodique */
-		rt_task_wait_period (NULL);
-		//rt_printf ("tcamera : Activation périodique\n");
-		
-                                 rt_mutex_acquire(&mutexImage, TM_INFINITE);
-                                 d_image_release(image);
-		 d_camera_get_frame(camera, image);
-		//d_image_print(img);
-                 
-                                
-                                /* Dessin arene */
-                                d_imageshop_draw_arena(image, arena);
+    if (!jpgimg) {
+        rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");
+    }
 
-		/* Compressing image */
-		d_jpegimage_compress(jpgimg, image);
+    /* Init camera */
+    camera->mIndice = 0;
+    d_camera_open(camera);
 
-		/* Sending message */
-		message = d_new_message();
-		if (!message) {rt_printf("[Init Camera] - Impossible de créer un nouveau message.\n");}
-		d_message_put_jpeg_image(message, jpgimg);
+    /* Getting a frame */
+    d_camera_print(camera);
 
-		if (write_in_queue (&queueMsgGUI, message, sizeof (DMessage)) < 0)
-		{
-			message->free (message);
-		}
+    /* Set task periodic */
+    rt_printf("tcamera : Debut de l'éxecution de periodique à 600 ms\n");
+    rt_task_set_periodic(NULL, TM_NOW, 600000000);
 
-		/* Free imgs */
-		d_jpegimage_release(jpgimg);
-		rt_mutex_release(&mutexImage);
-	}
-	
-	
-	/* Free var */
-	d_jpegimage_free(jpgimg);
-	d_image_free(image);
-	d_camera_close(camera);
-	d_camera_free(camera);
+    while (1) {
+        /* Attente de l'activation périodique */
+        rt_task_wait_period(NULL);
+        //rt_printf ("tcamera : Activation périodique\n");
+
+        rt_mutex_acquire(&mutexImage, TM_INFINITE);
+        d_image_release(image);
+        d_camera_get_frame(camera, image);
+        //d_image_print(img);
+
+
+        /* Dessin arene */
+        d_imageshop_draw_arena(image, arena);
+
+        /* Compressing image */
+        d_jpegimage_compress(jpgimg, image);
+
+        /* Sending message */
+        message = d_new_message();
+        if (!message) {
+            rt_printf("[Init Camera] - Impossible de créer un nouveau message.\n");
+        }
+        d_message_put_jpeg_image(message, jpgimg);
+
+        if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+            message->free(message);
+        }
+
+        /* Free imgs */
+        d_jpegimage_release(jpgimg);
+        rt_mutex_release(&mutexImage);
+    }
+
+
+    /* Free var */
+    d_jpegimage_free(jpgimg);
+    d_image_free(image);
+    d_camera_close(camera);
+    d_camera_free(camera);
 }
+
 void envoyer(void *arg) {
     DMessage *msg;
     int err;
@@ -174,15 +170,15 @@ void communiquer(void *arg) {
                             rt_printf("tserver : Action connecter robot\n");
                             rt_sem_v(&semConnecterRobot);
                             break;
-                            
+
                         case ACTION_FIND_ARENA:
-                                rt_printf("tserver : Le message reçu %d est une action detect arena\n",
-                                        num_msg);
-                                rt_sem_v(&semDetectArena);
-                        break;
+                            rt_printf("tserver : Le message reçu %d est une action detect arena\n",
+                                    num_msg);
+                            rt_sem_v(&semDetectArena);
+                            break;
                     }
                     break;
-                   
+
                 case MESSAGE_TYPE_MOVEMENT:
                     rt_printf("tserver : Le message reçu %d est un mouvement\n",
                             num_msg);
@@ -271,82 +267,77 @@ void deplacer(void *arg) {
 
 void batteryLevel(void *arg) {
 
-  DMessage *message;
-  int vbat;
-  int status = 1;
+    DMessage *message;
+    int vbat;
+    int status = 1;
 
-  
-  rt_printf ("tmove : Debut de l'éxecution de periodique à 1s (tbattery)\n");
-  rt_task_set_periodic (NULL, TM_NOW, 1000000000);
 
-	while (1){
-	rt_task_wait_period (NULL);
-	rt_printf ("tbattery : Activation périodique\n");
+    rt_printf("tmove : Debut de l'éxecution de periodique à 1s (tbattery)\n");
+    rt_task_set_periodic(NULL, TM_NOW, 1000000000);
 
-	rt_mutex_acquire (&mutexEtat, TM_INFINITE);
-	//status = etatCommRobot;
-                status = etatCommRobot; //A mettre dans verify status
-                //etatCommRobot = status; //Same
-	rt_mutex_release (&mutexEtat);
+    while (1) {
+        rt_task_wait_period(NULL);
+        rt_printf("tbattery : Activation périodique\n");
 
-	if (status == STATUS_OK){
-    
-	  	rt_mutex_acquire (&mutexEtat, TM_INFINITE);
-                                                robot->get_vbat(robot, &vbat);
-                                                battery->set_level(battery, vbat);
+        rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+        //status = etatCommRobot;
+        status = etatCommRobot; //A mettre dans verify status
+        //etatCommRobot = status; //Same
+        rt_mutex_release(&mutexEtat);
 
-			rt_mutex_release (&mutexEtat);
+        if (status == STATUS_OK) {
 
-			message = d_new_message ();
-			 	message->put_battery_level (message, battery);
-			rt_printf ("tbattery : Envoi message\n");
-			if (write_in_queue (&queueMsgGUI, message, sizeof (DMessage)) < 0)
-			{
-				message->free (message);
-			}
-		}
-	}
+            rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+            robot->get_vbat(robot, &vbat);
+            battery->set_level(battery, vbat);
+
+            rt_mutex_release(&mutexEtat);
+
+            message = d_new_message();
+            message->put_battery_level(message, battery);
+            rt_printf("tbattery : Envoi message\n");
+            if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                message->free(message);
+            }
+        }
+    }
 
 }
 
-void verifyConnectStatus(void *arg){
-    
-    
-    
+void verifyConnectStatus(void *arg) {
+
+
+
     int status;
-    
-    rt_printf ("tverify : Debut de l'éxecution de periodique à 1s (tverify)\n");
-    rt_task_set_periodic (NULL, TM_NOW, 1000000000);
-    
-    while (1){
+
+    rt_printf("tverify : Debut de l'éxecution de periodique à 1s (tverify)\n");
+    rt_task_set_periodic(NULL, TM_NOW, 1000000000);
+
+    while (1) {
         printf("tverify: entree dans la boucle\n");
-        rt_task_wait_period (NULL);
+        rt_task_wait_period(NULL);
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         status = etatCommRobot;
         rt_mutex_release(&mutexEtat);
-        
-        
-    
-        if (status==STATUS_OK){
+
+        if (status == STATUS_OK) {
             printf("tverufy: Activation de tverify\n");
-                
-                rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-                robot -> reload_wdt(robot);       
-                status = robot->get_status(robot);
-                etatCommRobot = status;
-                rt_mutex_release(&mutexEtat);
+
+            rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+            robot -> reload_wdt(robot);
+            status = robot->get_status(robot);
+            etatCommRobot = status;
+            rt_mutex_release(&mutexEtat);
+        } else {
+            robot->start(robot);
         }
-        else{
-                robot->start(robot);
-        }
-    
-        }
+
+    }
 }
 
-int write_in_queue (RT_QUEUE * msgQueue, void *data, int size)
-{
-  void *msg;
-  int err;
+int write_in_queue(RT_QUEUE * msgQueue, void *data, int size) {
+    void *msg;
+    int err;
 
     msg = rt_queue_alloc(msgQueue, size);
     memcpy(msg, &data, size);

@@ -89,7 +89,6 @@ void initStruct(void) {
     }
     if (err = rt_sem_create(&semDetectArena, NULL, 0, S_FIFO)) {
         rt_printf("Error semaphore create: %s\n", strerror(-err));
-        exit(EXIT_FAILURE);
     }
 
     /* Creation des taches */
@@ -109,28 +108,28 @@ void initStruct(void) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    
+
     if (err = rt_task_create(&tbattery, NULL, 0, PRIORITY_TBATTERY, 0)) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    
+
     if (err = rt_task_create(&tcamera, NULL, 0, PRIORITY_TCAMERA, 0)) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    
+
     if (err = rt_task_create(&tverify, NULL, 0, PRIORITY_TVERIFY, 0)) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
 
     /* Creation des files de messages */
-    if (err = rt_queue_create(&queueMsgGUI, "toto", MSG_QUEUE_SIZE*sizeof(DMessage), MSG_QUEUE_SIZE, Q_FIFO)){
+    if (err = rt_queue_create(&queueMsgGUI, "toto", MSG_QUEUE_SIZE * sizeof (DMessage), MSG_QUEUE_SIZE, Q_FIFO)) {
         rt_printf("Error msg queue create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
-    
+
     if (err = rt_task_create(&tarena, NULL, 0, PRIORITY_TARENA, 0)) {
         rt_printf("Error task create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
@@ -143,7 +142,7 @@ void initStruct(void) {
     camera = d_new_camera();
     image = d_new_image();
     mission = d_new_mission();
-    battery = d_new_battery ();
+    battery = d_new_battery();
 }
 
 void startTasks() {
