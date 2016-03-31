@@ -31,6 +31,7 @@ void camera_func(void * arg) {
     /* Create var */
     DJpegimage *jpgimg = d_new_jpegimage();
     DMessage *message;
+    DPosition * pos;
 
     if (!jpgimg) {
         rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");
@@ -55,11 +56,13 @@ void camera_func(void * arg) {
         rt_mutex_acquire(&mutexImage, TM_INFINITE);
         d_image_release(image);
         d_camera_get_frame(camera, image);
+        pos = d_image_compute_robot_position(image, arena);
         //d_image_print(img);
 
 
-        /* Dessin arene */
+        /* Dessin image */
         d_imageshop_draw_arena(image, arena);
+        d_imageshop_draw_position(image, pos);
 
         /* Compressing image */
         d_jpegimage_compress(jpgimg, image);
