@@ -73,6 +73,10 @@ void initStruct(void) {
         rt_printf("Error mutex create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
+    if (err = rt_mutex_create(&mutexImage, NULL)) {
+        rt_printf("Error mutex create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
 
     /* Creation du semaphore */
     if (err = rt_sem_create(&semConnecterRobot, NULL, 0, S_FIFO)) {
@@ -80,6 +84,10 @@ void initStruct(void) {
         exit(EXIT_FAILURE);
     }
     if (err = rt_sem_create(&semGetImage, NULL, 0, S_FIFO)) {
+        rt_printf("Error semaphore create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&semDetectArena, NULL, 0, S_FIFO)) {
         rt_printf("Error semaphore create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
@@ -122,12 +130,18 @@ void initStruct(void) {
         rt_printf("Error msg queue create: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
+    
+    if (err = rt_task_create(&tarena, NULL, 0, PRIORITY_TARENA, 0)) {
+        rt_printf("Error task create: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
 
     /* Creation des structures globales du projet */
     robot = d_new_robot();
     move = d_new_movement();
     serveur = d_new_server();
     camera = d_new_camera();
+    image = d_new_image();
     mission = d_new_mission();
     battery = d_new_battery ();
 }
@@ -162,6 +176,10 @@ void startTasks() {
         rt_printf("Error task start: %s\n", strerror(-err));
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_start(&tarena, &detect_arena, NULL)) {
+        rt_printf("Error task start: %s\n", strerror(-err));
+        exit(EXIT_FAILURE);
+    }
 
 }
 
@@ -172,4 +190,5 @@ void deleteTasks() {
     rt_task_delete(&tbattery);
     rt_task_delete(&tcamera);
     rt_task_delete(&tverify);
+    rt_task_delete(&tarena);
 }

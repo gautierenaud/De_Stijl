@@ -8,11 +8,25 @@ void detect_arena(void * arg)
     //No new needed for arena as d_image_compute_arena_position does
     while(1)
     {
-        rt_printf("tconnect : Attente du sémarphore semConnecterRobot\n");
+        rt_printf("tarena : Attente du sémarphore semDetectArena\n");
         rt_sem_p(&semDetectArena, TM_INFINITE);
-        rt_printf("tconnect : Detection de l'arène\n");
+        rt_printf("tarena : Detection de l'arène\n");
         
-        rt_mutex_acquire(mutexArena);
+        rt_mutex_acquire(&mutexArena, TM_INFINITE);
+        rt_mutex_acquire(&mutexImage, TM_INFINITE);
+        
+        if (image)
+        {
+            arena = d_image_compute_arena_position(image);
+            
+        }
+        else
+        {
+            rt_printf("tarena : Erreur, null pointer sur image\n");
+        }
+        
+        rt_mutex_release(&mutexArena);
+        rt_mutex_release(&mutexImage);
     }
     
     d_arena_free(arena);
@@ -22,21 +36,17 @@ void detect_arena(void * arg)
 void camera_func(void * arg)
 {
 	/* Create var */
-	DCamera *cam = d_new_camera();
-	DImage *img = d_new_image();
 	DJpegimage *jpgimg =  d_new_jpegimage();
 	DMessage *message;
 	
-	if (!cam){rt_printf("[Init Camera] - Impossible de créer une nouvelle camera.\n");}
-	if (!img){rt_printf("[Init Camera] - Impossible de créer une nouvelle image.\n");}
 	if (!jpgimg) {rt_printf("[Init Camera] - Impossible de créer une nouvelle image jpeg.\n");}
 	
 	/* Init camera */
-   cam->mIndice=0;
-	d_camera_open(cam);
+                camera->mIndice=0;
+	d_camera_open(camera);
 	
 	/* Getting a frame */
-	d_camera_print(cam);
+	d_camera_print(camera);
 	
 	/* Set task periodic */
 	rt_printf ("tcamera : Debut de l'éxecution de periodique à 600 ms\n");
@@ -48,11 +58,17 @@ void camera_func(void * arg)
 		rt_task_wait_period (NULL);
 		//rt_printf ("tcamera : Activation périodique\n");
 		
-		d_camera_get_frame(cam, img);
+                                 rt_mutex_acquire(&mutexImage, TM_INFINITE);
+                                 d_image_release(image);
+		 d_camera_get_frame(camera, image);
 		//d_image_print(img);
+                 
+                                
+                                /* Dessin arene */
+                                d_imageshop_draw_arena(image, arena);
 
 		/* Compressing image */
-		d_jpegimage_compress(jpgimg, img);
+		d_jpegimage_compress(jpgimg, image);
 
 		/* Sending message */
 		message = d_new_message();
@@ -66,15 +82,15 @@ void camera_func(void * arg)
 
 		/* Free imgs */
 		d_jpegimage_release(jpgimg);
-		d_image_release(img);
+		rt_mutex_release(&mutexImage);
 	}
 	
 	
 	/* Free var */
 	d_jpegimage_free(jpgimg);
-	d_image_free(img);
-	d_camera_close(cam);
-	d_camera_free(cam);
+	d_image_free(image);
+	d_camera_close(camera);
+	d_camera_free(camera);
 }
 void envoyer(void *arg) {
     DMessage *msg;
@@ -158,8 +174,15 @@ void communiquer(void *arg) {
                             rt_printf("tserver : Action connecter robot\n");
                             rt_sem_v(&semConnecterRobot);
                             break;
+                            
+                        case ACTION_FIND_ARENA:
+                                rt_printf("tserver : Le message reçu %d est une action detect arena\n",
+                                        num_msg);
+                                rt_sem_v(&semDetectArena);
+                        break;
                     }
                     break;
+                   
                 case MESSAGE_TYPE_MOVEMENT:
                     rt_printf("tserver : Le message reçu %d est un mouvement\n",
                             num_msg);

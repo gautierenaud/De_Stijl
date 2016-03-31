@@ -15,13 +15,14 @@
 extern "C" {
 #endif
 
-	void connecter (void * arg);
-   void communiquer(void *arg);
-   void deplacer(void *arg);
-   void envoyer(void *arg);
-	void batteryLevel(void *arg);
-	void camera_func(void *arg);
-        void verifyConnectStatus(void *arg);
+    void connecter (void * arg);
+    void communiquer(void *arg);
+    void deplacer(void *arg);
+    void envoyer(void *arg);
+    void batteryLevel(void *arg);
+    void camera_func(void *arg);
+    void verifyConnectStatus(void *arg);
+    void detect_arena(void * arg);
 
 #ifdef	__cplusplus
 }
