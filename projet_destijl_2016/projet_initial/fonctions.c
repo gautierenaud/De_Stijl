@@ -306,8 +306,6 @@ void batteryLevel(void *arg) {
 
 void verifyConnectStatus(void *arg) {
 
-
-
     int status;
 
     rt_printf("tverify : Debut de l'éxecution de periodique à 1s (tverify)\n");
@@ -321,15 +319,17 @@ void verifyConnectStatus(void *arg) {
         rt_mutex_release(&mutexEtat);
 
         if (status == STATUS_OK) {
-            printf("tverufy: Activation de tverify\n");
+            printf("tverify: Activation de tverify\n");
 
             rt_mutex_acquire(&mutexEtat, TM_INFINITE);
             robot -> reload_wdt(robot);
+            printf("tverify: reload watchdog\n");
             status = robot->get_status(robot);
             etatCommRobot = status;
             rt_mutex_release(&mutexEtat);
         } else {
             robot->start(robot);
+            printf("tverify: restart robot\n");
         }
 
     }
