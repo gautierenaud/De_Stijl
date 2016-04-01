@@ -316,6 +316,7 @@ void deplacer(void *arg) {
         status = etatCommRobot;
         rt_mutex_release(&mutexEtat);
 
+        rt_printf("tmove: entree dans tmove\n");
         if (status == STATUS_OK) {
             rt_mutex_acquire(&mutexMove, TM_INFINITE);
             switch (move->get_direction(move)) {
@@ -359,6 +360,9 @@ void deplacer(void *arg) {
                     message->free(message);
                 }
             }
+            
+            compteur_dc=0;
+        } else{
             compteur_dc++;
             if (compteur_dc >= 3) {
                 rt_printf("RIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIP\n");
@@ -366,8 +370,6 @@ void deplacer(void *arg) {
                 robot->stop(robot);
                 rt_sem_v(&semConnecterRobot);
             }
-        } else{
-            compteur_dc=0;
             
         }
     }
@@ -422,7 +424,7 @@ void batteryLevel(void *arg) {
 
 }
 
-void verifyConnectStatus(void *arg) {
+void verifyConnectStatus(void *arg) { //A corriger!!!
 
     int status;
 
