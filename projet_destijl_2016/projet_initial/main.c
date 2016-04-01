@@ -154,6 +154,8 @@ void initStruct(void) {
     image = d_new_image();
     mission = d_new_mission();
     battery = d_new_battery();
+    position = NULL;
+    arena = NULL;
 }
 
 void startTasks() {
