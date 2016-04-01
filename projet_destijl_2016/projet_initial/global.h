@@ -34,6 +34,7 @@ extern RT_SEM semConnecterRobot;
 extern RT_SEM semGetImage;
 extern RT_SEM semDetectArena;
 extern RT_SEM semComputePosition;
+extern RT_SEM semwatchDog;
 
 /* @descripteurs des files de messages */
 extern RT_QUEUE queueMsgGUI;
@@ -50,6 +51,7 @@ extern DBattery *battery;
 extern DArena * arena;
 extern DImage * image;
 extern DPosition * position;
+extern int compteur_dc;
 
 /* @constantes */
 extern int MSG_QUEUE_SIZE;

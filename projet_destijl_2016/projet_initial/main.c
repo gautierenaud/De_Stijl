@@ -93,6 +93,9 @@ void initStruct(void) {
     if (err = rt_sem_create(&semComputePosition, NULL, 0, S_FIFO)) {
         rt_printf("Error semaphore create: %s\n", strerror(-err));
     }
+    if (err = rt_sem_create(&semwatchDog, NULL, 0, S_FIFO)) {
+        rt_printf("Error semaphore create: %s\n", strerror(-err));
+    }
 
     /* Creation des taches */
     if (err = rt_task_create(&tServeur, NULL, 0, PRIORITY_TSERVEUR, 0)) {
