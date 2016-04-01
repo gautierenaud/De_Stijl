@@ -10,26 +10,21 @@ void compute_position(void * arg) {
     while(1)
     {
         rt_task_wait_period(NULL);
-        rt_printf("[tcomputepos] - Activation périodique.\n");
+        //rt_printf("[tcomputepos] - Activation périodique.\n");
         rt_sem_p(&semComputePosition, TM_INFINITE);
         
+        /* Aquire mutex */
+        //rt_printf("[tcomputepos] - Wait for mutex Pos.\n");
+        rt_mutex_acquire(&mutexPosition, TM_INFINITE);
+        //rt_printf("[tcomputepos] - Wait for mutex Arena.\n");
         rt_mutex_acquire(&mutexArena, TM_INFINITE);
+        //rt_printf("[tcomputepos] - Wait for mutex image.\n");
         rt_mutex_acquire(&mutexImage, TM_INFINITE);
+        
+        //rt_printf("[tcomputepos] - Entering in cs.\n");
         
         position = d_image_compute_robot_position(image, arena);
         
-        rt_mutex_release(&mutexArena);
-        
-        if (position)
-        {
-            d_imageshop_draw_position(image, position);
-        }
-        else 
-        {
-            rt_printf("[tcomputepos] - Robot en dehors de l'arène\n");
-        }
-        
-        rt_mutex_release(&mutexImage);
         rt_sem_v(&semComputePosition);
         
         
@@ -46,6 +41,12 @@ void compute_position(void * arg) {
                 message->free(message);
             }
         }
+        
+        /* Release mutex */
+        rt_mutex_release(&mutexArena);
+        rt_mutex_release(&mutexImage);
+        rt_mutex_release(&mutexPosition);
+         
 
     }
     
@@ -56,9 +57,9 @@ void compute_position(void * arg) {
 void detect_arena(void * arg) {
     //No new needed for arena as d_image_compute_arena_position does
     while (1) {
-        rt_printf("tarena : Attente du sémarphore semDetectArena\n");
+        rt_printf("[tarena] - Attente du sémarphore semDetectArena\n");
         rt_sem_p(&semDetectArena, TM_INFINITE);
-        rt_printf("tarena : Detection de l'arène\n");
+        rt_printf("[tarena] - Detection de l'arène\n");
 
         rt_mutex_acquire(&mutexArena, TM_INFINITE);
         rt_mutex_acquire(&mutexImage, TM_INFINITE);
@@ -67,7 +68,7 @@ void detect_arena(void * arg) {
             arena = d_image_compute_arena_position(image);
 
         } else {
-            rt_printf("tarena : Erreur, null pointer sur image\n");
+            rt_printf("[tarena] - Erreur, null pointer sur image\n");
         }
 
         rt_mutex_release(&mutexImage);
@@ -95,38 +96,35 @@ void camera_func(void * arg) {
     d_camera_print(camera);
 
     /* Set task periodic */
-    rt_printf("tcamera : Debut de l'éxecution de periodique à 600 ms\n");
+    rt_printf("[tcamera] - Debut de l'éxecution de periodique à 600 ms\n");
     rt_task_set_periodic(NULL, TM_NOW, 600000000);
 
     while (1) {
         /* Attente de l'activation périodique */
         rt_task_wait_period(NULL);
-        rt_printf ("tcamera : Activation périodique\n");
+        //rt_printf ("[tcamera] - Activation périodique\n");
 
+        //rt_printf ("[tcamera] - Waiting for arena mutex.\n");
+        rt_mutex_acquire(&mutexArena, TM_INFINITE);
+        //rt_printf ("[tcamera] - Waiting for image mutex.\n");
         rt_mutex_acquire(&mutexImage, TM_INFINITE);
+        //rt_printf ("[tcamera] - Entering in CS.\n");
         d_image_release(image);
         d_camera_get_frame(camera, image);
-        
-        rt_mutex_acquire(&mutexArena, TM_INFINITE);
-        //position = d_image_compute_robot_position(image, arena);
-        //d_image_print(img);
         
         /* Dessin image */
         if(arena)
         {
             d_imageshop_draw_arena(image, arena);
         }
-        
         rt_mutex_release(&mutexArena);
         
-        /*if (position)
+        rt_mutex_acquire(&mutexPosition, TM_INFINITE);
+        if (position)
         {
             d_imageshop_draw_position(image, position);
         }
-        else
-        {
-            rt_printf("[tcamera] - Robot en dehors de l'arène\n");
-        }*/
+        rt_mutex_release(&mutexPosition);
 
         /* Compressing image */
         d_jpegimage_compress(jpgimg, image);
@@ -160,15 +158,15 @@ void envoyer(void *arg) {
     int err;
 
     while (1) {
-        rt_printf("tenvoyer : Attente d'un message\n");
+        //rt_printf("tenvoyer : Attente d'un message\n");
         if ((err =
                 rt_queue_read(&queueMsgGUI, &msg, sizeof (DMessage),
                 TM_INFINITE)) >= 0) {
-            rt_printf("tenvoyer : envoi d'un message au moniteur\n");
+            //rt_printf("tenvoyer : envoi d'un message au moniteur\n");
             serveur->send(serveur, msg);
             msg->free(msg);
         } else {
-            rt_printf("Error msg queue write: %s\n", strerror(-err));
+            //rt_printf("Error msg queue write: %s\n", strerror(-err));
         }
     }
 }
@@ -190,7 +188,7 @@ void connecter(void *arg) {
         rt_mutex_release(&mutexEtat);
 
         if (status == STATUS_OK) {
-            status = robot->start_insecurely(robot);
+            status = robot->start(robot);
             if (status == STATUS_OK) {
                 rt_printf("tconnect : Robot démarrer\n");
             }
@@ -222,7 +220,7 @@ void communiquer(void *arg) {
     rt_mutex_release(&mutexEtat);
 
     while (var1 > 0) {
-        rt_printf("tserver : Attente d'un message\n");
+        //rt_printf("tserver : Attente d'un message\n");
         var1 = serveur->receive(serveur, msg);
         num_msg++;
         if (var1 > 0) {
@@ -290,7 +288,7 @@ void deplacer(void *arg) {
     while (1) {
         /* Attente de l'activation périodique */
         rt_task_wait_period(NULL);
-        rt_printf("tmove : Activation périodique\n");
+        //rt_printf("tmove : Activation périodique\n");
 
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         status = etatCommRobot;
@@ -338,9 +336,7 @@ void deplacer(void *arg) {
                     message->free(message);
                 }
             }
-        } else {
-            rt_sem_v(&semConnecterRobot);
-        }
+        } 
     }
 }
 
@@ -356,11 +352,12 @@ void batteryLevel(void *arg) {
 
     while (1) {
         rt_task_wait_period(NULL);
-        rt_printf("tbattery : Activation périodique\n");
+        //rt_printf("tbattery : Activation périodique\n");
 
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         //status = etatCommRobot;
-        status = etatCommRobot; //A mettre dans verify status
+        //status = etatCommRobot; //A mettre dans verify status
+        status = robot->get_status(robot);
         //etatCommRobot = status; //Same
         rt_mutex_release(&mutexEtat);
 
@@ -374,7 +371,7 @@ void batteryLevel(void *arg) {
 
             message = d_new_message();
             message->put_battery_level(message, battery);
-            rt_printf("tbattery : Envoi message\n");
+            rt_printf("[tbattery] - Envoi message\n");
             if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
                 message->free(message);
             }
@@ -391,24 +388,24 @@ void verifyConnectStatus(void *arg) {
     rt_task_set_periodic(NULL, TM_NOW, 1000000000);
 
     while (1) {
-        printf("tverify: entree dans la boucle\n");
+        //printf("tverify: entree dans la boucle\n");
         rt_task_wait_period(NULL);
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         status = etatCommRobot;
         rt_mutex_release(&mutexEtat);
 
         if (status == STATUS_OK) {
-            printf("tverify: Activation de tverify\n");
+            printf("[tverify] - Activation de tverify\n");
 
             rt_mutex_acquire(&mutexEtat, TM_INFINITE);
             robot -> reload_wdt(robot);
-            printf("tverify: reload watchdog\n");
+            //printf("tverify: reload watchdog\n");
             status = robot->get_status(robot);
             etatCommRobot = status;
             rt_mutex_release(&mutexEtat);
         } else {
-            robot->start(robot);
-            printf("tverify: restart robot\n");
+            rt_sem_v(&semConnecterRobot);
+            //printf("tverify: restart robot\n");
         }
 
     }
