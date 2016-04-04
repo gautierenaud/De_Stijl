@@ -101,6 +101,10 @@ void camera_func(void * arg) {
     rt_task_set_periodic(NULL, TM_NOW, 600000000);
 
     while (1) {
+        
+        rt_sem_p(&semCommunicate, TM_INFINITE);
+        rt_sem_v(&semCommunicate);
+        
         /* Attente de l'activation périodique */
         rt_task_wait_period(NULL);
         //rt_printf ("[tcamera] - Activation périodique\n");
@@ -242,6 +246,9 @@ void communiquer(void *arg) {
     rt_printf("tserver : Début de l'exécution de serveur\n");
     serveur->open(serveur, "8000");
     rt_printf("tserver : Connexion\n");
+    
+    // on libère le sémaphore sur la communication qui permettra le thread Camera de se lancer
+    rt_sem_v(&semCommunicate);
 
     rt_mutex_acquire(&mutexEtat, TM_INFINITE);
     etatCommMoniteur = 0;
