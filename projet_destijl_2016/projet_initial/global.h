@@ -30,6 +30,9 @@ extern RT_MUTEX mutexPosition;
 extern RT_MUTEX mutexImage;
 
 /* @descripteurs des sempahore */
+extern RT_SEM semCommunicate;
+extern RT_SEM semConnect;
+
 extern RT_SEM semConnecterRobot;
 extern RT_SEM semGetImage;
 extern RT_SEM semDetectArena;
