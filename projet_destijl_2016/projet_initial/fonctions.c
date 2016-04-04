@@ -194,10 +194,6 @@ void connecter(void *arg) {
         rt_printf("tconnect : Ouverture de la communication avec le robot\n");
         status = robot->open_device(robot);
 
-        rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-        etatCommRobot = status;
-        rt_mutex_release(&mutexEtat);
-
         if (status == STATUS_OK) {
 
             //status = robot->start_insecurely(robot);
@@ -205,21 +201,20 @@ void connecter(void *arg) {
             
 
             if (status == STATUS_OK) {
-                rt_printf("tconnect : Robot démarrer\n");
+                rt_printf("tconnect : Robot démarré\n");
+                compteur_dc=0;
                 rt_sem_v(&semwatchDog);
             }
             else
             {
+                rt_printf("tconnect : Connection failled\n");
                 rt_sem_v(&semConnecterRobot);
             }
-            compteur_dc=0;
-        } else{
-            compteur_dc++;
-            if (compteur_dc >= 3) {
-                compteur_dc = 0;
-                robot->stop(robot);
-                rt_sem_v(&semConnecterRobot);
-            }
+            
+        } 
+        else
+        {
+             rt_sem_v(&semConnecterRobot);
         }
 
         message = d_new_message();
@@ -231,6 +226,10 @@ void connecter(void *arg) {
         if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
             message->free(message);
         }
+        
+        rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+        etatCommRobot = status;
+        rt_mutex_release(&mutexEtat);
     }
 }
 
@@ -349,7 +348,6 @@ void deplacer(void *arg) {
             }
             rt_mutex_release(&mutexMove);
 
-            rt_printf("tmove : BOUUUUUUUUUUUUUUUUUUUUUUUUUUUGE\n");
             status = robot->set_motors(robot, gauche, droite);
 
             if (status != STATUS_OK) {
@@ -457,7 +455,7 @@ void verifyConnectStatus(void *arg) {
             //rt_printf("tverify: no watchdog\n");
             compteur_dc++;
             if (compteur_dc >= 10) {
-                rt_printf("RIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIP\n");
+                rt_printf("[tverify] - Connection with robot lost\n");
                 compteur_dc = 0;
                 robot->stop(robot);
                 rt_sem_v(&semConnecterRobot);
