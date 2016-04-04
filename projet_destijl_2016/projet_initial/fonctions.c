@@ -112,6 +112,7 @@ void camera_func(void * arg) {
         rt_mutex_acquire(&mutexImage, TM_INFINITE);
         //rt_printf ("[tcamera] - Entering in CS.\n");
 
+       
         d_image_release(image);
         d_camera_get_frame(camera, image);
         
@@ -200,11 +201,16 @@ void connecter(void *arg) {
         if (status == STATUS_OK) {
 
             //status = robot->start_insecurely(robot);
-            status = robot->start_insecurely(robot);
-            rt_sem_v(&semwatchDog);
+            status = robot->start(robot);
+            
 
             if (status == STATUS_OK) {
                 rt_printf("tconnect : Robot démarrer\n");
+                rt_sem_v(&semwatchDog);
+            }
+            else
+            {
+                rt_sem_v(&semConnecterRobot);
             }
             compteur_dc=0;
         } else{
@@ -364,13 +370,6 @@ void deplacer(void *arg) {
             compteur_dc=0;
         } else{
             compteur_dc++;
-            if (compteur_dc >= 3) {
-                rt_printf("RIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIP\n");
-                compteur_dc = 0;
-                robot->stop(robot);
-                rt_sem_v(&semConnecterRobot);
-            }
-            
         }
     }
 }
@@ -387,14 +386,14 @@ void batteryLevel(void *arg) {
 
     while (1) {
         rt_task_wait_period(NULL);
-        //rt_printf("tbattery : Activation périodique\n");
+        rt_printf("tbattery : Activation périodique\n");
 
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         //status = etatCommRobot;
         //status = etatCommRobot; //A mettre dans verify status
-        status = robot->get_status(robot);
-        //etatCommRobot = status; //Same
+        status =etatCommRobot;
         rt_mutex_release(&mutexEtat);
+        
 
         if (status == STATUS_OK) {
 
@@ -410,21 +409,17 @@ void batteryLevel(void *arg) {
             if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
                 message->free(message);
             }
-            compteur_dc = 01;
-            } else{
+            compteur_dc = 0;
+        }
+        else{
             compteur_dc++;
-            if (compteur_dc >= 3) {
-                rt_printf("RIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIP\n");
-                compteur_dc = 0;
-                robot->stop(robot);
-                rt_sem_v(&semConnecterRobot);
-            }
+
         }
     }
 
 }
 
-void verifyConnectStatus(void *arg) { //A corriger!!!
+void verifyConnectStatus(void *arg) { 
 
     int status;
 
@@ -436,30 +431,32 @@ void verifyConnectStatus(void *arg) { //A corriger!!!
     rt_printf("tverify: semaphore ok\n");
     
     while (1) {
-        //rt_printf("tverify: entree dans la boucle\n");
-
+        rt_printf("[tverify] - entree dans la boucle\n");
+        
         rt_task_wait_period(NULL);
         //rt_printf("tverify: mutex en attente\n");
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         //rt_printf("tverify: mutex acquis\n");
-        status = robot->get_status(robot);
+        status = robot -> reload_wdt(robot);
+        etatCommRobot = status;
         rt_mutex_release(&mutexEtat);
         //rt_printf("tverify: mutex relased\n");
+
 
         if (status == STATUS_OK) {
             //rt_printf("tverify: Activation de tverify\n");
 
             rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-            robot -> reload_wdt(robot);
             //printf("tverify: reload watchdog\n");
             status = robot->get_status(robot);
             etatCommRobot = status;
             rt_mutex_release(&mutexEtat);
             compteur_dc=0;
-        } else{
+        } 
+        else{
             //rt_printf("tverify: no watchdog\n");
             compteur_dc++;
-            if (compteur_dc >= 3) {
+            if (compteur_dc >= 10) {
                 rt_printf("RIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIP\n");
                 compteur_dc = 0;
                 robot->stop(robot);
