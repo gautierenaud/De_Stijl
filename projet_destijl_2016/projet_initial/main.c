@@ -157,11 +157,11 @@ void initStruct(void) {
     move = d_new_movement();
     serveur = d_new_server();
     camera = d_new_camera();
-    image = d_new_image();
     mission = d_new_mission();
     battery = d_new_battery();
     position = NULL;
     arena = NULL;
+    image = NULL;
 }
 
 void startTasks() {
