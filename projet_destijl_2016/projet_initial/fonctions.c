@@ -2,6 +2,8 @@
 
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
+//int display_position = 0;
+
 
 void compute_position(void * arg) {
     rt_task_set_periodic(NULL, TM_NOW, 600000000);
@@ -24,9 +26,9 @@ void compute_position(void * arg) {
         
         //rt_printf("[tcomputepos] - Entering in cs.\n");
         
-        position = d_image_compute_robot_position(image, arena);
+        //position = d_image_compute_robot_position(image, arena);
+        position = image->compute_robot_position(image, arena);
         
-        rt_sem_v(&semComputePosition);
         
         
         // Sending message
@@ -47,6 +49,7 @@ void compute_position(void * arg) {
         rt_mutex_release(&mutexImage);
         rt_mutex_release(&mutexArena);
         rt_mutex_release(&mutexPosition);
+        rt_sem_v(&semComputePosition);
          
 
     }
@@ -227,7 +230,7 @@ void connecter(void *arg) {
 
         rt_printf("tconnecter : Envoi message\n");
         message->print(message, 100);
-
+        arena->free(arena);
         if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
             message->free(message);
         }
@@ -257,6 +260,7 @@ void communiquer(void *arg) {
                     rt_printf("tserver : Le message %d reçu est une action\n",
                             num_msg);
                     DAction *action = d_new_action();
+                    //DArena temp = d_new_arena;
                     action->from_message(action, msg);
                     switch (action->get_order(action)) {
                         case ACTION_CONNECT_ROBOT:
@@ -274,12 +278,29 @@ void communiquer(void *arg) {
                             rt_printf("tserver : Le message reçu %d est une action compute position\n",
                                     num_msg);
                             rt_sem_v(&semComputePosition);
+                            //display_position=1;
                             break;
                             
                         case ACTION_STOP_COMPUTE_POSITION:
                             rt_printf("tserver : Le message reçu %d est une action stop compute position\n",
                                     num_msg);
                             rt_sem_p(&semComputePosition, TM_INFINITE);
+                            rt_mutex_acquire(&mutexPosition, TM_INFINITE);
+                            position = NULL;
+                            rt_mutex_release(&mutexPosition);
+                            //display_position=0;
+                            break;
+                        /*case ACTION_ARENA_IS_FOUND:
+                            //USELESSSSSSSSSSSSSSSSSSSSSS
+                            break;*/
+                        case ACTION_ARENA_FAILED:
+                            rt_mutex_acquire(&mutexArena, TM_INFINITE);
+                            arena->print(arena);
+                            free(arena);
+                            arena = NULL;
+                            rt_mutex_release(&mutexArena);
+                            rt_printf("tserver : Le message reçu %d est une action stop detect arena\n",
+                                    num_msg);
                             break;
                     }
                     break;
