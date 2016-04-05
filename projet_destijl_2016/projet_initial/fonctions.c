@@ -14,7 +14,6 @@ void compute_position(void * arg) {
         rt_task_wait_period(NULL);
         //rt_printf("[tcomputepos] - Activation périodique.\n");
         rt_sem_p(&semComputePosition, TM_INFINITE);
-        rt_sem_v(&semComputePosition);
         //rt_printf("[tcomputepos] - Computing position !\n");
         
         // Aquire mutex
@@ -28,7 +27,8 @@ void compute_position(void * arg) {
         //rt_printf("[tcomputepos] - Entering in cs.\n");
         
         //position = d_image_compute_robot_position(image, arena);
-        position = image->compute_robot_position(image, arena);
+        if (image)
+                position = image->compute_robot_position(image, arena);
         
         // Sending message
         if (position)
@@ -203,8 +203,8 @@ void connecter(void *arg) {
         rt_printf("tconnect : Ouverture de la communication avec le robot\n");
         status = robot->open_device(robot);
 
+         
         if (status == STATUS_OK) {
-
             status = robot->start_insecurely(robot);
             //status = robot->start(robot);
             
@@ -218,12 +218,14 @@ void connecter(void *arg) {
             else
             {
                 rt_printf("tconnect : Connection failled\n");
+                usleep(100000);
                 rt_sem_v(&semConnecterRobot);
             }
             
         } 
         else
         {
+            usleep(100000);
              rt_sem_v(&semConnecterRobot);
         }
 
@@ -232,7 +234,7 @@ void connecter(void *arg) {
 
         //rt_printf("tconnecter : Envoi message\n");
         message->print(message, 100);
-        arena->free(arena);
+        free(arena);
         if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
             message->free(message);
         }
@@ -300,7 +302,7 @@ void communiquer(void *arg) {
                             //display_position=0;
                             break;
                         /*case ACTION_ARENA_IS_FOUND:
-                            //USELESSSSSSSSSSSSSSSSSSSSSS
+                            //Never called by the monitor
                             break;*/
                         case ACTION_ARENA_FAILED:
                             rt_mutex_acquire(&mutexArena, TM_INFINITE);
