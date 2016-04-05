@@ -7,6 +7,8 @@ projet_destijl_2016/projet_initial/*.o
 projet_destijl_2016/projet_initial/nbproject/
 projet_destijl_2016/projet_initial/robot
 moniteur-2-1-5-beta/moniteur-2-1-5-beta/config.properties
+upload.sh
+connect.sh
 
 *.swp
 *~
