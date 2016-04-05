@@ -2,6 +2,8 @@
 
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
+//int display_position = 0;
+
 
 void compute_position(void * arg) {
     rt_task_set_periodic(NULL, TM_NOW, 600000000);
@@ -12,6 +14,7 @@ void compute_position(void * arg) {
         rt_task_wait_period(NULL);
         //rt_printf("[tcomputepos] - Activation périodique.\n");
         rt_sem_p(&semComputePosition, TM_INFINITE);
+        rt_sem_v(&semComputePosition);
         //rt_printf("[tcomputepos] - Computing position !\n");
         
         // Aquire mutex
@@ -24,10 +27,8 @@ void compute_position(void * arg) {
         
         //rt_printf("[tcomputepos] - Entering in cs.\n");
         
-        position = d_image_compute_robot_position(image, arena);
-        
-        rt_sem_v(&semComputePosition);
-        
+        //position = d_image_compute_robot_position(image, arena);
+        position = image->compute_robot_position(image, arena);
         
         // Sending message
         if (position)
@@ -47,6 +48,7 @@ void compute_position(void * arg) {
         rt_mutex_release(&mutexImage);
         rt_mutex_release(&mutexArena);
         rt_mutex_release(&mutexPosition);
+        rt_sem_v(&semComputePosition);
          
 
     }
@@ -211,6 +213,7 @@ void connecter(void *arg) {
                 rt_printf("tconnect : Robot démarré\n");
                 compteur_dc=0;
                 rt_sem_v(&semwatchDog);
+                rt_sem_v(&semConnect);
             }
             else
             {
@@ -229,7 +232,7 @@ void connecter(void *arg) {
 
         //rt_printf("tconnecter : Envoi message\n");
         message->print(message, 100);
-
+        arena->free(arena);
         if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
             message->free(message);
         }
@@ -266,6 +269,7 @@ void communiquer(void *arg) {
                     rt_printf("tserver : Le message %d reçu est une action\n",
                             num_msg);
                     DAction *action = d_new_action();
+                    //DArena temp = d_new_arena;
                     action->from_message(action, msg);
                     switch (action->get_order(action)) {
                         case ACTION_CONNECT_ROBOT:
@@ -283,12 +287,29 @@ void communiquer(void *arg) {
                             rt_printf("tserver : Le message reçu %d est une action compute position\n",
                                     num_msg);
                             rt_sem_v(&semComputePosition);
+                            //display_position=1;
                             break;
                             
                         case ACTION_STOP_COMPUTE_POSITION:
                             rt_printf("tserver : Le message reçu %d est une action stop compute position\n",
                                     num_msg);
                             rt_sem_p(&semComputePosition, TM_INFINITE);
+                            rt_mutex_acquire(&mutexPosition, TM_INFINITE);
+                            position = NULL;
+                            rt_mutex_release(&mutexPosition);
+                            //display_position=0;
+                            break;
+                        /*case ACTION_ARENA_IS_FOUND:
+                            //USELESSSSSSSSSSSSSSSSSSSSSS
+                            break;*/
+                        case ACTION_ARENA_FAILED:
+                            rt_mutex_acquire(&mutexArena, TM_INFINITE);
+                            arena->print(arena);
+                            free(arena);
+                            arena = NULL;
+                            rt_mutex_release(&mutexArena);
+                            rt_printf("tserver : Le message reçu %d est une action stop detect arena\n",
+                                    num_msg);
                             break;
                     }
                     break;
@@ -324,7 +345,11 @@ void deplacer(void *arg) {
     while (1) {
         /* Attente de l'activation périodique */
         rt_task_wait_period(NULL);
-        /*//rt_printf("tmove : Activation périodique\n");
+        //rt_printf("tmove : Activation périodique\n");
+        
+        // si la connection avec le robot a été initialisée
+        rt_sem_p(&semConnect, TM_INFINITE);
+        rt_sem_v(&semConnect);
 
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         status = etatCommRobot;
@@ -380,7 +405,7 @@ void deplacer(void *arg) {
             }
             
   
-        }*/
+        }
     }
 }
 
@@ -391,12 +416,17 @@ void batteryLevel(void *arg) {
     int status = 1;
 
 
-    rt_printf("tbattery : Debut de l'éxecution de periodique à 250ms (tbattery)\n");
-    rt_task_set_periodic(NULL, TM_NOW, 250000000);
+    rt_printf("[tbattery] : Debut de l'éxecution de periodique à 1s\n");
+    rt_task_set_periodic(NULL, TM_NOW, 1000000000);
 
     while (1) {
         rt_task_wait_period(NULL);
-        //rt_printf("tbattery : Activation périodique\n");
+        rt_printf("[tbattery] : Activation périodique\n");
+        
+        // on regarde si la connection a été (re)initialisée
+        rt_sem_p(&semConnect, TM_INFINITE);
+        rt_sem_v(&semConnect);
+
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         status =etatCommRobot;
         rt_mutex_release(&mutexEtat);
@@ -435,16 +465,21 @@ void verifyConnectStatus(void *arg) {
     rt_printf("tverify : Debut de l'éxecution de periodique à 1s (tverify)\n");
     rt_task_set_periodic(NULL, TM_NOW, 1000000000);
 
+    /*
     rt_printf("tverify: attente du sémaphore de démarrage du watchdog\n");
     rt_sem_p(&semwatchDog, TM_INFINITE);
     rt_printf("tverify: semaphore ok\n");
+    */
     
     while (1) {
-        rt_printf("[tverify] - entree dans la boucle\n");
+        rt_printf("[tverify] - activation périodique\n");
+        
+        rt_sem_p(&semwatchDog, TM_INFINITE);
+        rt_sem_v(&semwatchDog);
         
         rt_task_wait_period(NULL);
-        //rt_printf("tverify: mutex en attente\n");
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+
         //rt_printf("tverify: mutex acquis\n");
         //status = robot -> reload_wdt(robot); //Watchdog
         etatCommRobot = status;
@@ -476,13 +511,21 @@ void verifyConnectStatus(void *arg) {
             //rt_printf("tverify: no watchdog\n");
             compteur_dc++;
             if (compteur_dc >= 10) {
-                rt_printf("\n\n[tverify] - Connection with robot lost\n\n");
+
+                rt_printf("[tverify] - Connection with robot lost\n");
+                compteur_dc = 0;
                 status = robot->stop(robot);
                 if (status == STATUS_OK)
                 {
                     compteur_dc = 0;
-                    rt_sem_v(&semConnecterRobot);
+                    // comme on va relancer la connection, on va se bloquer
+                   rt_sem_p(&semwatchDog, TM_INFINITE);
+                   // on bloque les mouvements et la batterie
+                   rt_sem_p(&semConnect, TM_INFINITE);
+                   rt_sem_v(&semConnecterRobot);
                 }
+
+                rt_sem_v(&semConnecterRobot);
             }
         }
     }
