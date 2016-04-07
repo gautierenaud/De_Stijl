@@ -353,7 +353,7 @@ void deplacer(void *arg) {
     DMessage *message;
 
     rt_printf("tmove : Debut de l'éxecution de periodique à 200ms\n");
-    rt_task_set_periodic(NULL, TM_NOW, 200000000);
+    rt_task_set_periodic(NULL, TM_NOW, 400000000);
 
     while (1) 
     {
