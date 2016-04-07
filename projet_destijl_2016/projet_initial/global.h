@@ -28,6 +28,7 @@ extern RT_MUTEX mutexRobot;
 extern RT_MUTEX mutexArena;
 extern RT_MUTEX mutexPosition;
 extern RT_MUTEX mutexImage;
+extern RT_MUTEX mutexMission;
 
 /* @descripteurs des sempahore */
 extern RT_SEM semCommunicate;

@@ -1,4 +1,5 @@
 #include "fonctions.h"
+#include <math.h>
 
 int write_in_queue(RT_QUEUE * msgQueue, void *data, int size);
 
@@ -42,6 +43,7 @@ void compute_position(void * arg) {
             if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
                 message->free(message);
             }
+
         }
         
         // Release mutex
@@ -77,8 +79,14 @@ void detect_arena(void * arg) {
         rt_mutex_release(&mutexImage);
         rt_mutex_release(&mutexArena);
     }
-
-    d_arena_free(arena);
+    
+    rt_mutex_acquire(&mutexArena, TM_INFINITE);
+    if (arena )
+    {
+        d_arena_free(arena);
+        arena = NULL;
+    }
+     rt_mutex_release(&mutexArena);
     return;
 }
 
@@ -209,7 +217,9 @@ void connecter(void *arg) {
             //status = robot->start(robot);
             
 
-            if (status == STATUS_OK) {
+            if (status == STATUS_OK || status == STATUS_ERR_INVALID_PARAMS) //Invalid param indicate that the robot is already connected
+            {
+                status = STATUS_OK;
                 rt_printf("tconnect : Robot démarré\n");
                 compteur_dc=0;
                 rt_sem_v(&semwatchDog);
@@ -218,14 +228,12 @@ void connecter(void *arg) {
             else
             {
                 rt_printf("tconnect : Connection failled\n");
-                usleep(100000);
                 rt_sem_v(&semConnecterRobot);
             }
             
         } 
         else
         {
-            usleep(100000);
              rt_sem_v(&semConnecterRobot);
         }
 
@@ -234,7 +242,7 @@ void connecter(void *arg) {
 
         //rt_printf("tconnecter : Envoi message\n");
         message->print(message, 100);
-        free(arena);
+        
         if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
             message->free(message);
         }
@@ -242,6 +250,8 @@ void connecter(void *arg) {
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
         etatCommRobot = status;
         rt_mutex_release(&mutexEtat);
+        
+        usleep(500000);
     }
 }
 
@@ -306,9 +316,11 @@ void communiquer(void *arg) {
                             break;*/
                         case ACTION_ARENA_FAILED:
                             rt_mutex_acquire(&mutexArena, TM_INFINITE);
-                            arena->print(arena);
-                            free(arena);
-                            arena = NULL;
+                            if (arena)
+                            {
+                                free(arena);
+                                arena = NULL;
+                            }
                             rt_mutex_release(&mutexArena);
                             rt_printf("tserver : Le message reçu %d est une action stop detect arena\n",
                                     num_msg);
@@ -320,15 +332,14 @@ void communiquer(void *arg) {
                     //rt_printf("tserver : Le message reçu %d est un mouvement\n", num_msg);
                     rt_mutex_acquire(&mutexMove, TM_INFINITE);
                     move->from_message(move, msg);
-                    move->print(move);
                     rt_mutex_release(&mutexMove);
                     break;
                 case MESSAGE_TYPE_MISSION:
                     rt_printf("tserver : Le message reçu %d est une mission\n", num_msg);
-                    rt_mutex_acquire(&mutexMove, TM_INFINITE);
+                    rt_mutex_acquire(&mutexMission, TM_INFINITE);
+                    mission = d_new_mission();
                     mission->from_message(mission, msg);
-                    //mission->print(mission);
-                    rt_mutex_release(&mutexMove);
+                    rt_mutex_release(&mutexMission);
                     break;
             }
         }
@@ -345,7 +356,7 @@ void deplacer(void *arg) {
     rt_task_set_periodic(NULL, TM_NOW, 200000000);
 
     while (1) {
-        /* Attente de l'activation périodique */
+        // Attente de l'activation périodique
         rt_task_wait_period(NULL);
         //rt_printf("tmove : Activation périodique\n");
         
@@ -357,57 +368,138 @@ void deplacer(void *arg) {
         status = etatCommRobot;
         rt_mutex_release(&mutexEtat);
 
-        //rt_printf("tmove: entree dans tmove\n");
+        
         if (status == STATUS_OK) {
+            rt_printf("tmove: status ok\n");
+            rt_mutex_acquire(&mutexPosition, TM_INFINITE);
             rt_mutex_acquire(&mutexMove, TM_INFINITE);
-            switch (move->get_direction(move)) {
-                case DIRECTION_FORWARD:
-                    gauche = MOTEUR_ARRIERE_LENT;
-                    droite = MOTEUR_ARRIERE_LENT;
-                    break;
-                case DIRECTION_LEFT:
-                    gauche = MOTEUR_ARRIERE_LENT;
-                    droite = MOTEUR_AVANT_LENT;
-                    break;
-                case DIRECTION_RIGHT:
-                    gauche = MOTEUR_AVANT_LENT;
-                    droite = MOTEUR_ARRIERE_LENT;
-                    break;
-                case DIRECTION_STOP:
-                    gauche = MOTEUR_STOP;
-                    droite = MOTEUR_STOP;
-                    break;
-                case DIRECTION_STRAIGHT:
-                    gauche = MOTEUR_AVANT_LENT;
-                    droite = MOTEUR_AVANT_LENT;
-                    break;
-            }
-            rt_mutex_release(&mutexMove);
-
-            status = robot->set_motors(robot, gauche, droite);
-
-            if (status != STATUS_OK) {
-                compteur_dc=0;
-                rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-                etatCommRobot = status;
-                rt_mutex_release(&mutexEtat);
-
-                message = d_new_message();
-                message->put_state(message, status);
-
-                //rt_printf("tmove : Envoi message\n");
-                if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) <
-                        0) {
-                    message->free(message);
+            rt_mutex_acquire(&mutexMission, TM_INFINITE);
+            
+            
+            if (mission)
+            {
+                if (mission->type == MISSION_TYPE_STOP)
+                {
+                    rt_printf("tmove : Mission STOP \n");
+                    message = d_new_message();
+                    d_message_mission_terminate(message, mission->id);
+                    if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                        message->free(message);
+                    }
+                    d_mission_free(mission);
+                    mission = NULL;
                 }
+                else
+                {
+                    if (position)
+                    {
+                        DPosition * missionPos = d_new_position();
+                        d_mission_get_position(mission, missionPos);
+                        rt_printf("tmove : Debut de l'éxecution de la mission \n");
+                        
+                        //Calculate angle
+                        float dx = missionPos->get_x(missionPos) - position->get_x(position);
+                        float dy = missionPos->get_y(missionPos) - position->get_y(position);
+                        rt_printf("MISSION : dx=%f ; dy=%f\n", dx, dy);
+
+                        float angle=0.f;
+
+                        const float pi = 3.14159f;
+
+                        angle = atan2(dx, dy) + pi/2.f;
+                        angle *=-1;
+
+                        //rt_printf("MISSION : angle mission = %f\n", angle*360.f/(2.f*pi));
+                        //rt_printf("MISSION : angle robot = %f\n", position->get_orientation(position)*360.f/(2.f*pi));
+
+                        angle-= position->get_orientation(position);
+                        angle*=360.f/(2.f*pi);
+                        //rt_printf("MISSION : delta angle = %f\n", angle);
+                        
+                        if (mission->orientation==0)
+                        {
+                            
+                            int sens = HORAIRE;
+                            if (angle < 0)
+                            {
+                                angle *= -1;
+                                sens = ANTI_HORAIRE;
+                            }
+
+                             rt_printf("\n\n\ntmove : \n"
+                                "\t angle = %f\n"
+                                "\t sens = %d\n\n", angle, sens);
+                            if (d_robot_turn(robot, angle, sens)==STATUS_OK)
+                            {
+                                mission->orientation=1;
+                            }
+                        }
+                        else
+                        {
+                            int test_angle = abs((int) angle);
+                            if (test_angle <= 20.f || test_angle >=340) //Waiting for the robot to turn
+                            {
+                                float dist = sqrt(dx*dx + dy*dy);
+                                if (d_robot_move(robot, dist)==STATUS_OK)
+                                {
+                                     rt_printf("Mission : moving forward : %d mm\n", dist);
+                                    message = d_new_message();
+                                    d_message_mission_terminate(message, mission->id);
+                                    if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
+                                        message->free(message);
+                                    }
+
+                                    d_mission_free(mission);
+                                    mission = NULL;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                switch (move->get_direction(move)) {
+                    case DIRECTION_FORWARD:
+                        gauche = MOTEUR_ARRIERE_LENT;
+                        droite = MOTEUR_ARRIERE_LENT;
+                        break;
+                    case DIRECTION_LEFT:
+                        gauche = MOTEUR_ARRIERE_LENT;
+                        droite = MOTEUR_AVANT_LENT;
+                        break;
+                    case DIRECTION_RIGHT:
+                        gauche = MOTEUR_AVANT_LENT;
+                        droite = MOTEUR_ARRIERE_LENT;
+                        break;
+                    case DIRECTION_STOP:
+                        gauche = MOTEUR_STOP;
+                        droite = MOTEUR_STOP;
+                        break;
+                    case DIRECTION_STRAIGHT:
+                        gauche = MOTEUR_AVANT_LENT;
+                        droite = MOTEUR_AVANT_LENT;
+                        break;
+                }
+
+
+                status = robot->set_motors(robot, gauche, droite);
+            }
+            
+            rt_mutex_release(&mutexMission);
+            rt_mutex_release(&mutexMove);
+            rt_mutex_release(&mutexPosition);
+
+
+            if (status == STATUS_OK) {
+                compteur_dc=0;
             }
             else
             {
                 compteur_dc++;
             }
-            
-  
         }
+        //rt_printf("tmove : Fin période\n");
     }
 }
 
@@ -418,12 +510,12 @@ void batteryLevel(void *arg) {
     int status = 1;
 
 
-    rt_printf("[tbattery] : Debut de l'éxecution de periodique à 1s\n");
-    rt_task_set_periodic(NULL, TM_NOW, 1000000000);
+    rt_printf("[tbattery] : Debut de l'éxecution de periodique à 250ms\n");
+    rt_task_set_periodic(NULL, TM_NOW, 250000000);
 
     while (1) {
         rt_task_wait_period(NULL);
-        rt_printf("[tbattery] : Activation périodique\n");
+        //rt_printf("[tbattery] : Activation périodique\n");
         
         // on regarde si la connection a été (re)initialisée
         rt_sem_p(&semConnect, TM_INFINITE);
@@ -441,7 +533,10 @@ void batteryLevel(void *arg) {
             
             if (status ==STATUS_OK)
             {
-                battery->set_level(battery, vbat);
+                if (vbat !=-1)
+                {
+                    battery->set_level(battery, vbat);
+                }
 
                 message = d_new_message();
                 message->put_battery_level(message, battery);
@@ -461,63 +556,66 @@ void batteryLevel(void *arg) {
 }
 
 void verifyConnectStatus(void *arg) { 
-
+    DMessage *message;
+    message = d_new_message();
     int status;
 
     rt_printf("tverify : Debut de l'éxecution de periodique à 1s (tverify)\n");
     rt_task_set_periodic(NULL, TM_NOW, 1000000000);
 
-    /*
-    rt_printf("tverify: attente du sémaphore de démarrage du watchdog\n");
-    rt_sem_p(&semwatchDog, TM_INFINITE);
-    rt_printf("tverify: semaphore ok\n");
-    */
+    
+    //rt_printf("tverify: attente du sémaphore de démarrage du watchdog\n");
+    //rt_sem_p(&semwatchDog, TM_INFINITE);
+    //rt_printf("tverify: semaphore ok\n");
+    
     
     while (1) {
-        rt_printf("[tverify] - activation périodique\n");
+        rt_task_wait_period(NULL);
         
         rt_sem_p(&semwatchDog, TM_INFINITE);
+        rt_printf("[tverify] - activation périodique\n");
+        sleep(1);
         rt_sem_v(&semwatchDog);
         
-        rt_task_wait_period(NULL);
+        
         rt_mutex_acquire(&mutexEtat, TM_INFINITE);
 
         //rt_printf("tverify: mutex acquis\n");
         //status = robot -> reload_wdt(robot); //Watchdog
-        etatCommRobot = status;
+        //etatCommRobot = status;
+        int buzy;
+        status =d_robot_is_busy(robot, &buzy);
+        etatCommRobot = status; 
         rt_mutex_release(&mutexEtat);
-        //rt_printf("tverify: mutex relased\n");
         
-        DMessage *message;
-        message = d_new_message();
-        message->put_state(message, status);
-
-        //rt_printf("tmove : Envoi message\n");
-         if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) <0) 
-         {
-              message->free(message);
-         }
-
+        //rt_printf("tverify: mutex relased\n");
 
         if (status == STATUS_OK) {
-            //rt_printf("tverify: Activation de tverify\n");
-
-            rt_mutex_acquire(&mutexEtat, TM_INFINITE);
-            //printf("tverify: reload watchdog\n");
-            status = robot->get_status(robot);
-            etatCommRobot = status;
-            rt_mutex_release(&mutexEtat);
             compteur_dc=0;
         } 
         else{
             //rt_printf("tverify: no watchdog\n");
             compteur_dc++;
             if (compteur_dc >= 10) {
-
+                
+                rt_mutex_acquire(&mutexEtat, TM_INFINITE);
+                etatCommRobot = status ;
+                rt_mutex_release(&mutexEtat);
+                
                 rt_printf("[tverify] - Connection with robot lost\n");
-                compteur_dc = 0;
+                /*
+               //Acknowledge monitor
+               message->put_state(message, status);
+
+               //rt_printf("tverify : Envoi message\n");
+                if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) <0) 
+                {
+                     message->free(message);
+                }*/
+               
+ 
                 status = robot->stop(robot);
-                if (status == STATUS_OK)
+                if (status == STATUS_OK || compteur_dc > 15)
                 {
                     compteur_dc = 0;
                     // comme on va relancer la connection, on va se bloquer
@@ -526,8 +624,10 @@ void verifyConnectStatus(void *arg) {
                    rt_sem_p(&semConnect, TM_INFINITE);
                    rt_sem_v(&semConnecterRobot);
                 }
-
-                rt_sem_v(&semConnecterRobot);
+                else
+                {
+                    compteur_dc ++;
+                }
             }
         }
     }

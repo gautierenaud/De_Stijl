@@ -23,6 +23,7 @@ RT_MUTEX mutexRobot;
 RT_MUTEX mutexArena;
 RT_MUTEX mutexPosition;
 RT_MUTEX mutexImage;
+RT_MUTEX mutexMission;
 
 RT_SEM semCommunicate;
 RT_SEM semConnect;
