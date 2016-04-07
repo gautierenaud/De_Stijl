@@ -355,7 +355,8 @@ void deplacer(void *arg) {
     rt_printf("tmove : Debut de l'éxecution de periodique à 200ms\n");
     rt_task_set_periodic(NULL, TM_NOW, 200000000);
 
-    while (1) {
+    while (1) 
+    {
         // Attente de l'activation périodique
         rt_task_wait_period(NULL);
         //rt_printf("tmove : Activation périodique\n");
@@ -369,7 +370,8 @@ void deplacer(void *arg) {
         rt_mutex_release(&mutexEtat);
 
         
-        if (status == STATUS_OK) {
+        if (status == STATUS_OK) 
+        {
             rt_printf("tmove: status ok\n");
             rt_mutex_acquire(&mutexPosition, TM_INFINITE);
             rt_mutex_acquire(&mutexMove, TM_INFINITE);
@@ -378,6 +380,7 @@ void deplacer(void *arg) {
             
             if (mission)
             {
+                rt_printf("Mission : ... \n");
                 if (mission->type == MISSION_TYPE_STOP)
                 {
                     rt_printf("tmove : Mission STOP \n");
@@ -391,58 +394,66 @@ void deplacer(void *arg) {
                 }
                 else
                 {
+                    
+                    int busy;
+                    status = robot->is_busy(robot, &busy);
+                    rt_printf("Mission : busy=%d \n", busy);
                     if (position)
                     {
-                        DPosition * missionPos = d_new_position();
-                        d_mission_get_position(mission, missionPos);
-                        rt_printf("tmove : Debut de l'éxecution de la mission \n");
-                        
-                        //Calculate angle
-                        float dx = missionPos->get_x(missionPos) - position->get_x(position);
-                        float dy = missionPos->get_y(missionPos) - position->get_y(position);
-                        rt_printf("MISSION : dx=%f ; dy=%f\n", dx, dy);
-
-                        float angle=0.f;
-
-                        const float pi = 3.14159f;
-
-                        angle = atan2(dx, dy) + pi/2.f;
-                        angle *=-1;
-
-                        //rt_printf("MISSION : angle mission = %f\n", angle*360.f/(2.f*pi));
-                        //rt_printf("MISSION : angle robot = %f\n", position->get_orientation(position)*360.f/(2.f*pi));
-
-                        angle-= position->get_orientation(position);
-                        angle*=360.f/(2.f*pi);
-                        //rt_printf("MISSION : delta angle = %f\n", angle);
-                        
-                        if (mission->orientation==0)
+                        if ((status == STATUS_OK) && (busy==0))
                         {
+                            DPosition * missionPos = d_new_position();
+                            d_mission_get_position(mission, missionPos);
+
+                            //Calculate angle
+                            float dx = missionPos->get_x(missionPos) - position->get_x(position);
+                            float dy = missionPos->get_y(missionPos) - position->get_y(position);
+                            rt_printf("MISSION : dx=%f ; dy=%f\n", dx, dy);
+
+                            float angle=0.f;
+
+                            const float pi = 3.14159f;
+
+                            angle = atan2(dx, dy) + pi/2.f;
+                            angle *=-1;
+
+                            rt_printf("MISSION : angle mission = %f\n", angle*360.f/(2.f*pi));
+                            rt_printf("MISSION : angle robot = %f\n", position->get_orientation(position)*360.f/(2.f*pi));
+
+                            angle-= position->get_orientation(position);
+                            angle*=360.f/(2.f*pi);
+                            angle = (float)((int)angle % 360);
+                            if (angle > 180) {angle-=360;}
+                            if (angle <-180) {angle+=360;}
+                            rt_printf("MISSION : delta angle = %f\n", angle);
                             
-                            int sens = HORAIRE;
-                            if (angle < 0)
-                            {
-                                angle *= -1;
-                                sens = ANTI_HORAIRE;
-                            }
-
-                             rt_printf("\n\n\ntmove : \n"
-                                "\t angle = %f\n"
-                                "\t sens = %d\n\n", angle, sens);
-                            if (d_robot_turn(robot, angle, sens)==STATUS_OK)
-                            {
-                                mission->orientation=1;
-                            }
-                        }
-                        else
-                        {
                             int test_angle = abs((int) angle);
-                            if (test_angle <= 20.f || test_angle >=340) //Waiting for the robot to turn
+                            
+                            int dist = (int)sqrt(dx*dx + dy*dy);
+                            
+                            if (test_angle > 20.f && test_angle < 340&& dist >=50) // Robot mal orienté ?
                             {
-                                float dist = sqrt(dx*dx + dy*dy);
-                                if (d_robot_move(robot, dist)==STATUS_OK)
+                                int sens = HORAIRE;
+                                if (angle < 0)
                                 {
-                                     rt_printf("Mission : moving forward : %d mm\n", dist);
+                                    sens = ANTI_HORAIRE;
+                                }
+
+                                d_robot_turn(robot, test_angle, sens);
+                                //sleep(3);
+                            }
+                            else
+                            {
+                                rt_printf("MISSION : dx=%f ; dy=%f\n", dx, dy);
+
+                                if (dist >=50)
+                                {
+                                    d_robot_move(robot, dist);
+                                    //sleep(2);
+                                }
+                                else
+                                {
+                                     rt_printf("Mission : finished\n", dist);
                                     message = d_new_message();
                                     d_message_mission_terminate(message, mission->id);
                                     if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) < 0) {
@@ -454,6 +465,10 @@ void deplacer(void *arg) {
                                 }
                             }
                         }
+                    }
+                    else // no position 
+                    {
+                        rt_printf("Mission : can't find robot's position !!\n");
                     }
                 }
             }
@@ -557,7 +572,6 @@ void batteryLevel(void *arg) {
 
 void verifyConnectStatus(void *arg) { 
     DMessage *message;
-    message = d_new_message();
     int status;
 
     rt_printf("tverify : Debut de l'éxecution de periodique à 1s (tverify)\n");
@@ -603,15 +617,16 @@ void verifyConnectStatus(void *arg) {
                 rt_mutex_release(&mutexEtat);
                 
                 rt_printf("[tverify] - Connection with robot lost\n");
-                /*
+                
                //Acknowledge monitor
+               message = d_new_message();
                message->put_state(message, status);
 
                //rt_printf("tverify : Envoi message\n");
                 if (write_in_queue(&queueMsgGUI, message, sizeof (DMessage)) <0) 
                 {
                      message->free(message);
-                }*/
+                }
                
  
                 status = robot->stop(robot);
